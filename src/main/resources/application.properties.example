@@ -1,0 +1,61 @@
+# ==============================
+# Allgemeine Spring Boot Einstellungen
+# ==============================
+spring.application.name=demo
+spring.h2.console.enabled=true
+spring.datasource.generate-unique-name=false
+
+# ==============================
+# Datenbank (ersetze die Platzhalter)
+# ==============================
+spring.datasource.url=jdbc:postgresql://localhost:5432/YOUR_DB_NAME
+spring.datasource.username=YOUR_DB_USERNAME
+spring.datasource.password=YOUR_DB_PASSWORD
+spring.datasource.driver-class-name=org.postgresql.Driver
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+
+logging.level.org.springframework.jdbc=DEBUG
+spring.jpa.hibernate.ddl-auto=update
+spring.jackson.serialization.fail-on-empty-beans=false
+server.port=5555
+
+# ==============================
+# RSA Keys (lokal hinterlegen)
+# ==============================
+rsa.private-key=classpath:certs/private.pem
+rsa.public-key=classpath:certs/public.pem
+
+# ==============================
+# OAuth2 Clients (ersetze die Platzhalter)
+# ==============================
+# Google
+spring.security.oauth2.client.registration.google.client-id=YOUR_GOOGLE_CLIENT_ID
+spring.security.oauth2.client.registration.google.client-secret=YOUR_GOOGLE_CLIENT_SECRET
+spring.security.oauth2.client.registration.google.scope=openid,email,profile
+spring.security.oauth2.client.registration.google.redirect-uri=https://spring.morfic.de/oauth2/callback?provider=google
+spring.security.oauth2.client.provider.google.authorization-uri=https://accounts.google.com/o/oauth2/v2/auth
+spring.security.oauth2.client.provider.google.token-endpoint=https://oauth2.googleapis.com/token
+spring.security.oauth2.client.provider.google.user-info-uri=https://openidconnect.googleapis.com/v1/userinfo
+spring.security.oauth2.client.provider.google.user-name-attribute=sub
+spring.security.oauth2.client.registration.google.authorization-grant-type=authorization_code
+
+# GitHub
+spring.security.oauth2.client.registration.github.client-id=YOUR_GITHUB_CLIENT_ID
+spring.security.oauth2.client.registration.github.client-secret=YOUR_GITHUB_CLIENT_SECRET
+spring.security.oauth2.client.registration.github.scope=user
+spring.security.oauth2.client.registration.github.redirect-uri=https://spring.morfic.de/oauth2/callback?provider=github
+spring.security.oauth2.client.provider.github.token-endpoint=https://github.com/login/oauth/access_token
+spring.security.oauth2.client.registration.github.authorization-grant-type=authorization_code
+
+# Discord
+spring.security.oauth2.client.registration.discord.client-id=YOUR_DISCORD_CLIENT_ID
+spring.security.oauth2.client.registration.discord.client-secret=YOUR_DISCORD_CLIENT_SECRET
+spring.security.oauth2.client.registration.discord.scope=identify,email
+spring.security.oauth2.client.registration.discord.redirect-uri=https://spring.morfic.de/oauth2/callback?provider=discord
+spring.security.oauth2.client.registration.discord.provider=discord
+spring.security.oauth2.client.provider.discord.authorization-uri=https://discord.com/api/oauth2/authorize
+spring.security.oauth2.client.provider.discord.token-uri=https://discord.com/api/oauth2/token
+spring.security.oauth2.client.provider.discord.user-info-uri=https://discord.com/api/users/@me
+spring.security.oauth2.client.provider.discord.user-name-attribute=id
+spring.security.oauth2.client.registration.discord.authorization-grant-type=authorization_code
+

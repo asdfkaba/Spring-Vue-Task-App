@@ -1,0 +1,31 @@
+{
+  "name": "task-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@primevue/forms": "^4.3.6",
+    "@primevue/themes": "^4.0.5",
+    "@tailwindcss/vite": "^4.1.11",
+    "base-64": "^1.0.0",
+    "date-fns": "^4.1.0",
+    "pinia": "^2.1.7",
+    "pinia-plugin-persistedstate": "^3.2.3",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.3.6",
+    "tailwindcss": "^4.1.11",
+    "vue": "^3.4.29",
+    "vue-router": "^4.3.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.5",
+    "daisyui": "^5.0.43",
+    "vite": "^5.3.1",
+    "vite-plugin-vue-devtools": "^7.3.1"
+  }
+}
