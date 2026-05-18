@@ -12,7 +12,7 @@ jobs:
 
       - name: Build Vue
         run: |
-          cd frontend
+          cd task-frontend
           npm ci
           npm run build
 
@@ -22,7 +22,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "frontend/dist/*"
+          source: "task-frontend/dist/*"
           target: "/var/www/spring/"
           strip_components: 2
 
