@@ -53,7 +53,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            mv /home/moritz/demo-*.jar /home/moritz/tasks.jar
+            mv /home/moritz/tasks/demo-*.jar /home/moritz/tasks/tasks.jar
             export XDG_RUNTIME_DIR=/run/user/$(id -u)
             systemctl --user restart tasks
             systemctl --user status tasks
