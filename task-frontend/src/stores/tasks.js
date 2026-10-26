@@ -19,7 +19,7 @@ export const useTaskStore = defineStore('storeId', {
 	},
         async fetchTasks() {
 	    console.log("call fetchTasks");
-            authFetch('https://spring.morfic.de/api/tasks', {
+            authFetch('/api/tasks', {
             }).then(response => response.json()
             ).then(
                 fetchedTasks => {
@@ -31,7 +31,7 @@ export const useTaskStore = defineStore('storeId', {
 
         },
         async createTask(data) {
-            authFetch('https://spring.morfic.de/api/tasks', {
+            authFetch('/api/tasks', {
                 method: 'POST',
                 headers: new Headers({
                     "Authorization": `Bearer ${this.token}`,
@@ -48,7 +48,7 @@ export const useTaskStore = defineStore('storeId', {
             )
         },
 	async updateTask(data) {
-            authFetch('https://spring.morfic.de/api/tasks', {
+            authFetch('/api/tasks', {
                 method: 'POST',
                 headers: new Headers({
                     "Authorization": `Bearer ${this.token}`,
@@ -66,7 +66,7 @@ export const useTaskStore = defineStore('storeId', {
 	},
         async deleteTask(id) {
 	    console.log("delete task", id);
-            authFetch(`https://spring.morfic.de/api/tasks/${id}/delete`, {
+            authFetch(`/api/tasks/${id}/delete`, {
                 method: 'DELETE',
                 headers: new Headers({
                     "Authorization": `Bearer ${this.token}`,

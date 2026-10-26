@@ -52,7 +52,7 @@ async function loginWithGithub() {
   sessionStorage.setItem("pkce_code_verifier", code_verifier);
 
   const clientId = 'Ov23liqqiVqq1lqxD5AV';
-  const redirectUri = 'https://spring.morfic.de/oauth2/callback?provider=github';
+  const redirectUri = `${window.location.origin}/oauth2/callback?provider=github`;
   const scope = 'user';
   const responseType = 'code';
 
@@ -77,7 +77,7 @@ async function loginWithDiscord() {
   sessionStorage.setItem("pkce_code_verifier", code_verifier);
 
   const clientId = '1390322077785133067';
-  const redirectUri = 'https://spring.morfic.de/oauth2/callback?provider=discord';
+  const redirectUri = `${window.location.origin}/oauth2/callback?provider=discord`;
   const scope = 'identify email';
   const responseType = 'code';
 
@@ -101,7 +101,7 @@ async function loginWithGoogle() {
   sessionStorage.setItem("pkce_code_verifier", code_verifier);
 
   const clientId = '462857227500-spe4l3v5mgjb63u0kbb9tpr87n09tkbq.apps.googleusercontent.com';
-  const redirectUri = 'https://spring.morfic.de/oauth2/callback?provider=google';
+  const redirectUri = `${window.location.origin}/oauth2/callback?provider=google`;
   const scope = 'openid email profile';
   const responseType = 'code';
 
