@@ -18,7 +18,7 @@ export default {
     try {
       const code_verifier = sessionStorage.getItem("pkce_code_verifier");
       const provider = new URLSearchParams(window.location.search).get('provider');
-      const response = await fetch('https://spring.morfic.de/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: new Headers({
                     'Accept': 'application/json',

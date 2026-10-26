@@ -132,7 +132,7 @@ public class WebSecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/login**", "/auth/**", "/error").permitAll()
+                        .requestMatchers("/login**", "/auth/**", "/error", "/health", "/").permitAll()
                         .anyRequest().authenticated()            // Require auth for everything else, including /token
                 ).addFilterBefore(new JwtCookieAuthenticationFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
