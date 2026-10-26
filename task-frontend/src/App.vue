@@ -1,31 +1,30 @@
 <script setup>
-import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router'
-import { reactive, ref, computed, onMounted, watch } from 'vue'
+import { RouterView, useRouter } from 'vue-router'
+import { onMounted, watch } from 'vue'
+import Toast from 'primevue/toast'
+import ConfirmDialog from 'primevue/confirmdialog'
+import Button from 'primevue/button'
+import { useToast } from 'primevue/usetoast'
 import { useTaskStore } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 
-import Toast from 'primevue/toast';
-import { useToast } from 'primevue/usetoast'
-import Button from 'primevue/button';
-import ButtonGroup from 'primevue/buttongroup';
-
-
 const taskStore = useTaskStore()
 const authStore = useAuthStore()
-
-
 const router = useRouter()
 const toast = useToast()
 const toastStore = useToastStore()
 
-watch(() => toastStore.toasts, (newToasts) => {
-  if (newToasts.length > 0) {
-    const nextToast = newToasts[0]
-    toast.add(nextToast)
-    toastStore.shiftToast()
-  }
-}, { deep: true })
+watch(
+  () => toastStore.toasts,
+  (newToasts) => {
+    if (newToasts.length > 0) {
+      toast.add(newToasts[0])
+      toastStore.shiftToast()
+    }
+  },
+  { deep: true },
+)
 
 function logout() {
   authStore.logout()
@@ -34,105 +33,48 @@ function logout() {
 }
 
 onMounted(async () => {
-  console.log("App.vue onMounted")
-  await router.isReady() // ensure the route is fully loaded
+  await router.isReady()
   const route = router.currentRoute.value
-  console.log(route.path)
   if (route.path === '/oauth2/callback') return
 
-  console.log("checkLoginStatus")
   const result = await authStore.checkLoginStatus()
   if (result.status === 'ok') {
-    if (route.path === '/') {
-    	router.push('/tasks')
-    }
+    if (route.path === '/') router.push('/tasks')
   } else if (result.status === 'unauthenticated') {
     router.push('/')
   } else if (result.status === 'backend-unreachable') {
-    toast.add({
-      severity: 'warn',
-      summary: 'Offline',
-      detail: 'Backend not reachable',
-    })
+    toast.add({ severity: 'warn', summary: 'Offline', detail: 'Backend not reachable' })
   } else if (result.status === 'error') {
-    toast.add({
-      severity: 'error',
-      summary: 'Unexpected Error',
-      detail: `Code ${result.code}`,
-    })
+    toast.add({ severity: 'error', summary: 'Unexpected error', detail: `Code ${result.code}` })
   }
 })
-
 </script>
 
-<template> 
-  <div class="app-container">
-    <div class="header-container">
-      <div class="header !mb-10">Task App</div>
-      <div v-if="authStore.isAuthenticated" style="justify-items: center;">
-	<ButtonGroup>
-	  <Button :label="authStore.user.email" icon="pi pi-user" size="small"/>
-	  <Button label="Logout" @click="logout" severity="warn" size="small"/>
-	</ButtonGroup>
-      </div>
-    </div>
+<template>
+  <div class="min-h-screen">
+    <header class="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
+      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
+        <RouterLink to="/tasks" class="flex items-center gap-2 font-semibold text-slate-900">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white">
+            <i class="pi pi-check-square" />
+          </span>
+          Task App
+        </RouterLink>
 
-    <Toast />
-    
-    <div class="content">
-      <div v-if="authStore.isAuthenticated" class="user">
+        <div v-if="authStore.isAuthenticated" class="flex min-w-0 items-center gap-2">
+          <span class="hidden truncate text-sm text-slate-500 sm:inline">
+            <i class="pi pi-user mr-1.5 text-xs" />{{ authStore.user?.email }}
+          </span>
+          <Button label="Log out" icon="pi pi-sign-out" severity="secondary" text size="small" @click="logout" />
+        </div>
       </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-8">
       <RouterView />
-    </div>
+    </main>
+
+    <Toast position="bottom-right" />
+    <ConfirmDialog :style="{ width: '26rem' }" :breakpoints="{ '640px': '95vw' }" />
   </div>
 </template>
-
-<style>
-html, body {
-  margin: 0;
-  padding: 0;
-  font-family: sans-serif;
-  width: 100%;
-}
-
-@media only screen and (min-width: 1001px) {
-    .app-container {
-        margin: 0.5rem auto;
-        min-width: 1000px;
-        width: 100%;
-    }
-}
-
-@media only screen and (max-width: 1000px) {
-    .app-container {
-        margin: 0.5rem 0.3rem;
-	width: 100%;
-    }
-}
-
-.header-container {
-    display: grid;
-    place-content: center;
-    text-align: center;
-}
-
-.header {
-  font-size: 3rem;
-  border-bottom: 5px solid green;
-  display: inline-block;
-}
-
-
-.logout {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-
-.content {
-  display: flex;
-  flex-flow: wrap;
-  gap: 1rem;
-}
-
-</style>

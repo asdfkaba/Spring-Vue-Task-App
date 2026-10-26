@@ -1,40 +1,35 @@
 import './assets/main.css'
-import 'primeicons/primeicons.css';
-
-
+import 'primeicons/primeicons.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
-import ToastService from 'primevue/toastservice';
-import PrimeVue from 'primevue/config';
-import Aura from '@primevue/themes/aura';
-
+import PrimeVue from 'primevue/config'
+import ToastService from 'primevue/toastservice'
+import ConfirmationService from 'primevue/confirmationservice'
+import Aura from '@primevue/themes/aura'
 
 import App from './App.vue'
 import router from './router'
-import { useTaskStore } from '@/stores/tasks'
-import { useAuthStore } from './stores/auth'
-import MyComponent from './views/CreateTaskView.vue'
-
 
 const app = createApp(App)
-
-app.component('MyComponent', MyComponent)
 
 const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
 app.use(pinia)
 
-const store = useTaskStore()
-
 app.use(router)
-app.use(ToastService);
+app.use(ToastService)
+app.use(ConfirmationService)
 app.use(PrimeVue, {
-    theme: {
-        preset: Aura
-    }
-});
+  theme: {
+    preset: Aura,
+    options: {
+      // The app has no dark styling yet, so keep PrimeVue light too.
+      darkModeSelector: '.app-dark',
+      cssLayer: { name: 'primevue', order: 'theme, base, primevue, components, utilities' },
+    },
+  },
+})
 
 app.mount('#tasks')
-
