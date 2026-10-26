@@ -6,9 +6,11 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Integer> {
     List<Task> findByUserName(String username);
     List<Task> findByUserEmail(String email);
+    Optional<Task> findByIdAndUserEmail(Integer id, String email);
 }

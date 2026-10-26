@@ -51,27 +51,23 @@ export const useTaskStore = defineStore('storeId', {
       return task
     },
 
-    // The backend has no dedicated update endpoint: POST with an id overwrites
-    // the whole entity. So we send the existing task merged with the changes,
-    // otherwise fields like `created` would be reset to null.
+    // PUT replaces all editable fields, so send the current values plus the changes.
     async updateTask(id, changes) {
       const original = this.tasks.find((t) => t.id === id)
       if (!original) throw new Error('Task not found')
 
       const payload = {
-        id,
         title: original.title,
         description: original.description,
         due_date: original.due_date,
         priority: original.priority,
         status: original.status,
-        created: original.created,
         ...changes,
       }
 
       const response = await expectOk(
-        await authFetch('/api/tasks', {
-          method: 'POST',
+        await authFetch(`/api/tasks/${id}`, {
+          method: 'PUT',
           headers: JSON_HEADERS,
           body: JSON.stringify(payload),
         }),

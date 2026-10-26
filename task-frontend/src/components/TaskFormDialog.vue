@@ -169,6 +169,7 @@ async function save() {
             optionValue="value"
             :allowEmpty="false"
             fluid
+            class="[&_.p-togglebutton]:px-2 [&_.p-togglebutton-label]:whitespace-nowrap"
           />
         </div>
       </div>
