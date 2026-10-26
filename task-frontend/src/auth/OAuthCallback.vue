@@ -1,5 +1,8 @@
 <template>
-  <p>Logging in...</p>
+  <div class="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-slate-500">
+    <i class="pi pi-spin pi-spinner text-2xl" />
+    <p>Signing you in…</p>
+  </div>
 </template>
 
 <script>

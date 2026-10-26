@@ -1,205 +1,230 @@
 <script setup>
-import { reactive, ref, computed } from 'vue'
-
-import { useTaskStore } from '@/stores/tasks'
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import Select from 'primevue/select';
-import Menu from 'primevue/menu'
-import Badge from 'primevue/badge'
-import Card from 'primevue/card'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
-import { format } from 'date-fns'
-
-
-import { useRouter, useRoute } from 'vue-router'
-
-const router = useRouter()
+import InputText from 'primevue/inputtext'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
+import Select from 'primevue/select'
+import SelectButton from 'primevue/selectbutton'
+import Skeleton from 'primevue/skeleton'
+import Menu from 'primevue/menu'
+import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
+import { useTaskStore } from '@/stores/tasks'
+import { fromApi } from '@/utils/date'
+import { STATUS_OPTIONS } from '@/utils/task'
+import TaskCard from '@/components/TaskCard.vue'
+import TaskFormDialog from '@/components/TaskFormDialog.vue'
 
 const store = useTaskStore()
+const router = useRouter()
+const confirm = useConfirm()
+const toast = useToast()
 
-let statusOptions = ["TODO", "IN_PROGRESS", "DONE"].map((status) => ({ name: status, value: status }));
-const selectedStatus = ref('');
+const statusFilter = ref('OPEN')
+const search = ref('')
+const sortBy = ref('due')
 
-import { onMounted } from 'vue'
-
-onMounted(() => {
-    store.fetchTasks()
-})
-
-const menu = ref()
-
-const selectedTask = ref()
-
-const menuItems = [
-  {
-    label: 'Edit',
-    icon: 'pi pi-pencil',
-    command: () => editItem(selectedTask.value),
-  },
-  {
-    label: 'Delete',
-    icon: 'pi pi-trash',
-    command: () => deleteItem(selectedTask.value),
-  },
+const sortOptions = [
+  { label: 'Due date', value: 'due' },
+  { label: 'Priority', value: 'priority' },
+  { label: 'Newest first', value: 'created' },
 ]
 
-function showMenu(event, task) {
-  selectedTask.value = task
-  menu.value.show(event)
+function countFor(filter) {
+  return store.tasks.filter((t) => matchesStatus(t, filter)).length
 }
 
-function formatDate(dateArray) {
-  if (!dateArray) return '—'
-  const date = new Date(...dateArray)
-  return format(date, 'yyyy-MM-dd HH:mm')
+function matchesStatus(task, filter) {
+  if (filter === 'ALL') return true
+  if (filter === 'OPEN') return task.status !== 'DONE'
+  return task.status === filter
 }
 
-function priorityLabel(priority) {
-  return ['Low', 'Medium', 'High'][priority - 1] || 'Unknown'
+const filterOptions = computed(() => [
+  { label: 'Open', value: 'OPEN', count: countFor('OPEN') },
+  ...STATUS_OPTIONS.map((s) => ({ label: s.label, value: s.value, count: countFor(s.value) })),
+  { label: 'All', value: 'ALL', count: store.tasks.length },
+])
+
+// Tasks without a date go last when sorting by due date.
+function dueTime(task) {
+  return fromApi(task.due_date)?.getTime() ?? Infinity
 }
 
-function priorityColor(priority) {
+const visibleTasks = computed(() => {
+  const query = search.value.trim().toLowerCase()
+  const list = store.tasks.filter(
+    (t) =>
+      matchesStatus(t, statusFilter.value) &&
+      (!query ||
+        t.title?.toLowerCase().includes(query) ||
+        t.description?.toLowerCase().includes(query)),
+  )
+  const sorters = {
+    due: (a, b) => dueTime(a) - dueTime(b),
+    priority: (a, b) => (b.priority ?? 0) - (a.priority ?? 0) || dueTime(a) - dueTime(b),
+    created: (a, b) => (fromApi(b.created)?.getTime() ?? 0) - (fromApi(a.created)?.getTime() ?? 0),
+  }
+  return [...list].sort(sorters[sortBy.value])
+})
+
+// Create/edit dialog
+const dialogVisible = ref(false)
+const editingTask = ref(null)
+
+function openCreate() {
+  editingTask.value = null
+  dialogVisible.value = true
+}
+
+function openEdit(task) {
+  editingTask.value = task
+  dialogVisible.value = true
+}
+
+// Per-card action menu
+const menu = ref()
+const menuTask = ref(null)
+const menuItems = computed(() => {
+  const task = menuTask.value
+  if (!task) return []
+  const statusItems = STATUS_OPTIONS.filter((s) => s.value !== task.status).map((s) => ({
+    label: `Mark as ${s.label.toLowerCase()}`,
+    icon: s.icon,
+    command: () => changeStatus(task, s.value),
+  }))
   return [
-    'text-green-600 font-semibold',
-    'text-yellow-700 font-semibold',
-    'text-red-600 font-semibold',
-  ][priority - 1] || 'text-gray-500'
+    { label: 'Edit', icon: 'pi pi-pencil', command: () => openEdit(task) },
+    ...statusItems,
+    { separator: true },
+    { label: 'Delete', icon: 'pi pi-trash', class: 'text-red-600', command: () => askDelete(task) },
+  ]
+})
+
+function showMenu(event, task) {
+  menuTask.value = task
+  menu.value.toggle(event)
 }
 
-function statusSeverity(status) {
-  switch (status) {
-    case 'TODO': return 'secondary'
-    case 'IN_PROGRESS': return 'info'
-    case 'DONE': return 'success'
-    default: return 'warning'
+async function changeStatus(task, status) {
+  try {
+    await store.updateTask(task.id, { status })
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Could not update task', detail: err.message, life: 5000 })
   }
 }
 
-
-function deleteItem(task) {
-    store.deleteTask(task.id)
-}
-
-function editItem(task) {
-  router.push({
-    path: `/tasks/${task.id}/edit`,
-    params: { itemId: task.id, task }
+function askDelete(task) {
+  confirm.require({
+    header: 'Delete task?',
+    message: `"${task.title}" will be deleted permanently.`,
+    icon: 'pi pi-trash',
+    rejectProps: { label: 'Cancel', severity: 'secondary', text: true },
+    acceptProps: { label: 'Delete', severity: 'danger' },
+    accept: async () => {
+      try {
+        await store.deleteTask(task.id)
+        toast.add({ severity: 'success', summary: 'Task deleted', life: 2500 })
+      } catch (err) {
+        toast.add({ severity: 'error', summary: 'Could not delete task', detail: err.message, life: 5000 })
+      }
+    },
   })
 }
 
-function toggle(){}
+async function load() {
+  try {
+    await store.fetchTasks()
+  } catch (err) {
+    if (err.name === 'AuthError') {
+      router.push('/')
+      return
+    }
+    toast.add({ severity: 'error', summary: 'Could not load tasks', detail: err.message, life: 5000 })
+  }
+}
 
-const items = [{
-          label: 'Reschedule',
-        },
-        {
-          label: 'Mark Completed'
-        },
-        {
-          label: 'Cancel Schedule'
-        },
-        {
-          label: 'Generate Bill'
-        },
-]
-
+onMounted(load)
 </script>
 
 <template>
-  <div class="tasks">
-    <Card v-for="task in store.tasks" :key="task.id" class="shadow-sm p-3 !bg-emerald-100">
-      <template #header>
-        <div class="flex justify-between items-start">
-          <div class="font-semibold text-xl">{{ task.title }}</div>
-          <Button 
-            icon="pi pi-ellipsis-v"
-            class="p-button-text p-button-plain p-0"
-            @click="showMenu($event, task)"
-          />
-        </div>
+  <section class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-900">My tasks</h1>
+        <p class="text-sm text-slate-500">
+          {{ countFor('OPEN') }} open · {{ countFor('DONE') }} done
+        </p>
+      </div>
+      <Button label="New task" icon="pi pi-plus" @click="openCreate" />
+    </div>
+
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="-mx-1 overflow-x-auto px-1 pb-1">
+        <SelectButton
+          v-model="statusFilter"
+          :options="filterOptions"
+          optionLabel="label"
+          optionValue="value"
+          :allowEmpty="false"
+          class="whitespace-nowrap"
+        >
+          <template #option="{ option }">
+            <span>{{ option.label }}</span>
+            <span class="ml-1 text-xs opacity-60">{{ option.count }}</span>
+          </template>
+        </SelectButton>
+      </div>
+
+      <div class="flex gap-2">
+        <IconField class="min-w-0 flex-1 lg:w-64 lg:flex-none">
+          <InputIcon class="pi pi-search" />
+          <InputText v-model="search" placeholder="Search tasks" fluid />
+        </IconField>
+        <Select
+          v-model="sortBy"
+          :options="sortOptions"
+          optionLabel="label"
+          optionValue="value"
+          aria-label="Sort by"
+          class="w-40 shrink-0"
+        />
+      </div>
+    </div>
+
+    <div v-if="store.loading && !store.loaded" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Skeleton v-for="n in 6" :key="n" height="11rem" borderRadius="0.75rem" />
+    </div>
+
+    <div v-else-if="visibleTasks.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <TaskCard
+        v-for="task in visibleTasks"
+        :key="task.id"
+        :task="task"
+        @edit="openEdit"
+        @menu="showMenu"
+      />
+    </div>
+
+    <div
+      v-else
+      class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center"
+    >
+      <i class="pi pi-inbox text-4xl text-slate-300" />
+      <template v-if="store.tasks.length === 0">
+        <p class="font-medium text-slate-700">No tasks yet</p>
+        <p class="text-sm text-slate-500">Create your first task to get started.</p>
+        <Button label="New task" icon="pi pi-plus" class="mt-2" @click="openCreate" />
       </template>
-
-      <template #content>
-        <p class="mb-2 text-gray-700">{{ task.description }}</p>
-
-        <div class="flex flex-col text-sm text-gray-600 gap-1">
-          <div><i class="pi pi-calendar-plus mr-2"></i>Created: {{ formatDate(task.created) }}</div>
-          <div><i class="pi pi-calendar-minus mr-2"></i>Due: {{ formatDate(task.due_date) }}</div>
-          <div>
-            <i class="pi pi-flag mr-2"></i>
-            Priority:
-            <span :class="priorityColor(task.priority)">
-              {{ priorityLabel(task.priority) }}
-            </span>
-          </div>
-          <div>
-            <i class="pi pi-check-circle mr-2"></i>
-            Status: 
-            <Badge :value="task.status" :severity="statusSeverity(task.status)" />
-          </div>
-        </div>
+      <template v-else>
+        <p class="font-medium text-slate-700">No matching tasks</p>
+        <p class="text-sm text-slate-500">Try a different filter or search term.</p>
       </template>
-    </Card>
+    </div>
 
-    <Menu ref="menu" :model="menuItems" :popup="true" />
-  </div>
-<div class="create">
-  <MyComponent/>
-</div>
+    <Menu ref="menu" :model="menuItems" popup />
+    <TaskFormDialog v-model:visible="dialogVisible" :task="editingTask" />
+  </section>
 </template>
-
-<style>
-.tasks {
-    display: grid;
-    grid-gap: 1rem;
-    box-sizing: border-box;
-    width: 100%;
-    grid-template-columns: repeat(auto-fill, minmax(min(320px, 95vw), 1fr));
-}
-.task {
-    display: grid;
-    place-items: center;
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin-bottom: 0.5rem;
-    position: relative;
-}
-
-.task-delete {
-    position: absolute !important;
-    top: 5px;
-    right: 5px;
-}
-.task-title {
-    font-size: 1.5rem;
-    text-align: center;
-}
-.create {
-    grid-column: 1/-1;
-    text-align: center;
-    width: 100%;
-}
-.custom-button {
-    width: 55px;
-    font-size: x-small;
-    font-weight: bolder;
-    text-align: center;
-    border: 1px solid red;
-    border-radius: 4px;
-    padding: 0.1rem 0.3rem;
-    font-family: monospace;
-}
-.delete {
-    border: 1px solid red;
-}
-.edit {
-    border: 1px solid orange;
-}
-.action-buttons {
-display: flex;
-grid-gap: 0.3rem;
-}
-</style>
-

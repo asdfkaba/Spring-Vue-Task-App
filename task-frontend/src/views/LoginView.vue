@@ -2,11 +2,7 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
-import InputGroup from 'primevue/inputgroup';
-import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
-import Password from 'primevue/password';
-import base64 from 'base-64';
 
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast';
@@ -121,38 +117,42 @@ async function loginWithGoogle() {
 </script>
 
 <template>
-  <div class="login">
-  <Button
-  @click="loginWithGoogle"
-  class="m-3"
-  icon="pi pi-google"
-  label="Login with Google"
-  severity="warn"
-  outlined
-  />
-<Button
-  @click="loginWithGithub"
-  icon="pi pi-github"
-  label="Login with Github"
-  severity="warn"
-  outlined
-/>
-  <Button
-  @click="loginWithDiscord"
-  icon="pi pi-discord"
-  label="Login with Discord"
-  severity="warn"
-  outlined
-/>
+  <div class="flex min-h-[70vh] items-center justify-center">
+    <div class="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <div class="mb-8 flex flex-col items-center gap-3 text-center">
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500 text-white">
+          <i class="pi pi-check-square text-xl" />
+        </span>
+        <h1 class="text-xl font-semibold text-slate-900">Welcome to Task App</h1>
+        <p class="text-sm text-slate-500">Sign in to see and manage your tasks.</p>
+      </div>
 
+      <div class="flex flex-col gap-3">
+        <Button
+          label="Continue with Google"
+          icon="pi pi-google"
+          severity="secondary"
+          outlined
+          fluid
+          @click="loginWithGoogle"
+        />
+        <Button
+          label="Continue with GitHub"
+          icon="pi pi-github"
+          severity="secondary"
+          outlined
+          fluid
+          @click="loginWithGithub"
+        />
+        <Button
+          label="Continue with Discord"
+          icon="pi pi-discord"
+          severity="secondary"
+          outlined
+          fluid
+          @click="loginWithDiscord"
+        />
+      </div>
+    </div>
   </div>
-
 </template>
-<style>
-.login {
-    margin: auto;
-    display: grid;
-    grid-gap: .5rem;
-}
-</style>
-
