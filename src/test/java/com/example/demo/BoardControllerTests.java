@@ -25,6 +25,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(BoardController.class)
@@ -90,6 +92,27 @@ class BoardControllerTests {
                 .andExpect(status().isBadRequest());
 
         verify(boardService, never()).updateColumn(anyInt(), anyString(), any());
+    }
+
+    @Test
+    void createBoardReturnsSummary() throws Exception {
+        Board created = new Board("Side project", null);
+        created.setId(5);
+        created.setSlug("side-project");
+        when(boardService.createBoard(ALICE, "Side project")).thenReturn(created);
+
+        mockMvc.perform(post("/boards").contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Side project\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(5))
+                .andExpect(jsonPath("$.name").value("Side project"))
+                .andExpect(jsonPath("$.slug").value("side-project"));
+    }
+
+    @Test
+    void deleteBoard() throws Exception {
+        mockMvc.perform(delete("/boards/5")).andExpect(status().isNoContent());
+
+        verify(boardService).deleteBoard(5, ALICE);
     }
 
     @Test

@@ -13,7 +13,8 @@ const boardStore = useBoardStore()
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
-const widthClass = computed(() => (route.meta.fullWidth ? 'max-w-none' : 'max-w-6xl'))
+// Full-width pages (the board with its sidebar) handle their own padding.
+const fullWidth = computed(() => route.meta.fullWidth === true)
 const toast = useToast()
 const toastStore = useToastStore()
 
@@ -41,7 +42,7 @@ onMounted(async () => {
 
   const result = await authStore.checkLoginStatus()
   if (result.status === 'ok') {
-    if (route.path === '/') router.push('/tasks')
+    if (route.path === '/') router.push('/boards')
   } else if (result.status === 'unauthenticated') {
     router.push('/')
   } else if (result.status === 'backend-unreachable') {
@@ -55,8 +56,8 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen">
     <header class="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
-      <div class="mx-auto flex h-14 items-center justify-between gap-4 px-4" :class="widthClass">
-        <RouterLink to="/tasks" class="flex items-center gap-2 font-semibold text-slate-900">
+      <div class="mx-auto flex h-14 items-center justify-between gap-4 px-4" :class="fullWidth ? 'max-w-none' : 'max-w-6xl'">
+        <RouterLink to="/boards" class="flex items-center gap-2 font-semibold text-slate-900">
           <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white">
             <i class="pi pi-check-square" />
           </span>
@@ -72,7 +73,7 @@ onMounted(async () => {
       </div>
     </header>
 
-    <main class="mx-auto px-4 py-8" :class="widthClass">
+    <main :class="fullWidth ? '' : 'mx-auto max-w-6xl px-4 py-8'">
       <RouterView />
     </main>
 

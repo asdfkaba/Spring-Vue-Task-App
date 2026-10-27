@@ -37,6 +37,8 @@ class BoardServiceTests {
     @Autowired
     TaskRepository taskRepository;
     @Autowired
+    BoardRepository boardRepository;
+    @Autowired
     EntityManager em;
 
     Board board;
@@ -356,5 +358,95 @@ class BoardServiceTests {
         assertThat(detail.columns()).extracting(BoardDtos.ColumnDto::name)
                 .containsExactly("To do", "In progress", "Done");
         assertThat(detail.tasks()).extracting(t -> t.title()).containsExactly("A", "B", "D");
+    }
+
+    @Test
+    void createdBoardHasDefaultColumnsAndIsListedLast() {
+        Board second = boardService.createBoard(ALICE, "  Side project ");
+
+        assertThat(second.getName()).isEqualTo("Side project");
+        assertThat(columnRepository.findByBoardOrderByPosition(second))
+                .extracting(BoardColumn::getName)
+                .containsExactly("To do", "In progress", "Done");
+        assertThat(boardService.boardsOf(ALICE))
+                .extracting(Board::getName)
+                .containsExactly("My board", "Side project");
+    }
+
+    @Test
+    void boardNameMustNotBeBlank() {
+        assertThatThrownBy(() -> boardService.createBoard(ALICE, " "))
+                .satisfies(e -> assertStatus(e, HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void deleteBoardRemovesItsColumnsAndTasksOnly() {
+        Board other = boardService.createBoard(ALICE, "Other");
+        BoardColumn otherColumn = columnRepository.findByBoardOrderByPosition(other).get(0);
+        Task kept = addTask("Kept", otherColumn);
+        Task gone = addTask("Gone", todo);
+        addTask("Gone too", done);
+
+        boardService.deleteBoard(board.getId(), ALICE);
+        em.flush();
+        em.clear();
+
+        assertThat(boardRepository.findById(board.getId())).isEmpty();
+        assertThat(columnRepository.findById(todo.getId())).isEmpty();
+        assertThat(taskRepository.findById(gone.getId())).isEmpty();
+        assertThat(taskRepository.findById(kept.getId())).isPresent();
+        assertThat(boardService.boardsOf(ALICE)).extracting(Board::getName).containsExactly("Other");
+    }
+
+    @Test
+    void lastBoardCanBeDeleted() {
+        boardService.deleteBoard(board.getId(), ALICE);
+
+        assertThat(boardService.boardsOf(ALICE)).isEmpty();
+    }
+
+    @Test
+    void cannotDeleteBoardOfOtherUser() {
+        userRepository.save(new User("Bob", BOB, null));
+
+        assertThatThrownBy(() -> boardService.deleteBoard(board.getId(), BOB))
+                .satisfies(e -> assertStatus(e, HttpStatus.NOT_FOUND));
+        assertThat(boardRepository.findById(board.getId())).isPresent();
+    }
+
+    @Test
+    void boardsGetSlugsUniquePerUser() {
+        Board second = boardService.createBoard(ALICE, "My Board!");
+        Board third = boardService.createBoard(ALICE, "my board");
+        userRepository.save(new User("Bob", BOB, null));
+        Board bobs = boardService.createBoard(BOB, "My board");
+
+        assertThat(board.getSlug()).isEqualTo("my-board");
+        assertThat(second.getSlug()).isEqualTo("my-board-2");
+        assertThat(third.getSlug()).isEqualTo("my-board-3");
+        assertThat(bobs.getSlug()).isEqualTo("my-board");
+    }
+
+    @Test
+    void missingSlugsAreFilledInWithoutClashes() {
+        Board other = boardService.createBoard(ALICE, "My board");
+        board.setSlug(null);
+        other.setSlug(null);
+        em.flush();
+
+        int filled = boardService.fillMissingSlugs();
+        em.flush();
+        em.clear();
+
+        assertThat(filled).isEqualTo(2);
+        assertThat(boardService.boardsOf(ALICE))
+                .extracting(Board::getSlug)
+                .containsExactly("my-board", "my-board-2");
+        assertThat(boardService.fillMissingSlugs()).isZero();
+    }
+
+    @Test
+    void boardDetailCarriesTheSlug() {
+        assertThat(boardService.getBoard(board.getId(), ALICE).slug()).isEqualTo("my-board");
     }
 }

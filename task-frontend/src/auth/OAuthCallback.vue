@@ -31,7 +31,7 @@ export default {
 	});
       const auth = useAuthStore()
       auth.checkLoginStatus();
-      this.$router.push('/tasks');
+      this.$router.push('/boards');
     } catch (error) {
       console.error('Login failed', error);
     }

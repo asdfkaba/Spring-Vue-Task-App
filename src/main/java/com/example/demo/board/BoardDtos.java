@@ -9,20 +9,24 @@ public final class BoardDtos {
     private BoardDtos() {
     }
 
-    public record BoardSummary(Integer id, String name) {
+    public record BoardSummary(Integer id, String name, String slug) {
         static BoardSummary from(Board board) {
-            return new BoardSummary(board.getId(), board.getName());
+            return new BoardSummary(board.getId(), board.getName(), board.getSlug());
         }
     }
 
     // Columns are sorted by position, tasks by column position and then by their own position.
-    public record BoardDetail(Integer id, String name, List<ColumnDto> columns, List<TaskDto> tasks) {
+    public record BoardDetail(Integer id, String name, String slug, List<ColumnDto> columns, List<TaskDto> tasks) {
     }
 
     public record ColumnDto(Integer id, String name, String color, int position) {
         static ColumnDto from(BoardColumn column) {
             return new ColumnDto(column.getId(), column.getName(), column.getColor(), column.getPosition());
         }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record NewBoardRequest(String name) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

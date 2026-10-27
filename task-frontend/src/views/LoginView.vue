@@ -14,7 +14,7 @@ const authStore = useAuthStore()
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
-    router.push('/tasks')
+    router.push('/boards')
   }
 })
 

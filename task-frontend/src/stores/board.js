@@ -8,7 +8,9 @@ const JSON_HEADERS = {
 
 async function expectOk(response, action) {
   if (!response.ok) {
-    throw new Error(`${action} failed (HTTP ${response.status})`)
+    const error = new Error(`${action} failed (HTTP ${response.status})`)
+    error.status = response.status
+    throw error
   }
   return response
 }
@@ -18,17 +20,20 @@ function sendJson(url, method, body) {
 }
 
 /**
- * The user's board: columns in order, and per column the tasks in order.
+ * The user's boards, and the open board: columns in order, and per column the tasks in order.
  * Drag & drop changes the arrays in tasksByColumn / columns directly; the persist* actions
  * then tell the backend. If that fails, the caller reloads the board to undo the local change.
  */
 export const useBoardStore = defineStore('board', {
   state: () => ({
-    board: null, // { id, name }
+    boards: [], // [{ id, name }] in creation order
+    boardsLoaded: false,
+    board: null, // the open board: { id, name }
     columns: [], // [{ id, name, color, position }]
     tasksByColumn: {}, // { [columnId]: [task, ...] }
     loading: false,
     loaded: false,
+    requestedBoardId: null, // to ignore late answers after switching boards quickly
   }),
 
   getters: {
@@ -39,22 +44,31 @@ export const useBoardStore = defineStore('board', {
 
   actions: {
     reset() {
+      this.boards = []
+      this.boardsLoaded = false
+      this.closeBoard()
+    },
+
+    closeBoard() {
       this.board = null
       this.columns = []
       this.tasksByColumn = {}
       this.loaded = false
     },
 
-    async fetchBoard() {
+    async fetchBoards() {
+      this.boards = await (await expectOk(await authFetch('/api/boards'), 'Loading boards')).json()
+      this.boardsLoaded = true
+    },
+
+    async fetchBoard(id) {
+      // Switching boards: don't show the previous board while the new one loads.
+      if (this.board?.id !== id) this.closeBoard()
+      this.requestedBoardId = id
       this.loading = true
       try {
-        const boards = await (await expectOk(await authFetch('/api/boards'), 'Loading boards')).json()
-        if (boards.length === 0) throw new Error('No board found for this account')
-
-        // One board per user for now.
-        const detail = await (
-          await expectOk(await authFetch(`/api/boards/${boards[0].id}`), 'Loading board')
-        ).json()
+        const detail = await (await expectOk(await authFetch(`/api/boards/${id}`), 'Loading board')).json()
+        if (this.requestedBoardId !== id) return
 
         const tasksByColumn = Object.fromEntries(detail.columns.map((c) => [c.id, []]))
         for (const task of detail.tasks) {
@@ -65,8 +79,21 @@ export const useBoardStore = defineStore('board', {
         this.tasksByColumn = tasksByColumn
         this.loaded = true
       } finally {
-        this.loading = false
+        if (this.requestedBoardId === id) this.loading = false
       }
+    },
+
+    async createBoard(name) {
+      const response = await expectOk(await sendJson('/api/boards', 'POST', { name }), 'Creating board')
+      const board = await response.json()
+      this.boards.push(board)
+      return board
+    },
+
+    async deleteBoard(id) {
+      await expectOk(await authFetch(`/api/boards/${id}`, { method: 'DELETE' }), 'Deleting board')
+      this.boards = this.boards.filter((b) => b.id !== id)
+      if (this.board?.id === id) this.closeBoard()
     },
 
     // ---- Tasks ----
