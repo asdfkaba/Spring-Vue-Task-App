@@ -1,6 +1,5 @@
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
 import Button from 'primevue/button';
 
@@ -11,7 +10,6 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 const router = useRouter()
 
-const store = useTaskStore()
 const authStore = useAuthStore()
 
 onMounted(() => {
