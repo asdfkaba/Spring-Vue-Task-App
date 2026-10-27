@@ -1,5 +1,8 @@
 package com.example.demo.task;
 
+import com.example.demo.board.BoardColumn;
+import com.example.demo.board.BoardDtos.MoveTaskRequest;
+import com.example.demo.board.BoardService;
 import com.example.demo.user.User;
 import com.example.demo.user.UserRepository;
 import org.slf4j.Logger;
@@ -22,48 +25,65 @@ public class TaskController {
 
     private final TaskRepository repository;
     private final UserRepository userRepository;
+    private final BoardService boardService;
 
-    public TaskController(TaskRepository repo, UserRepository repo2) {
-        this.repository = repo;
-        this.userRepository = repo2;
+    public TaskController(TaskRepository repository, UserRepository userRepository, BoardService boardService) {
+        this.repository = repository;
+        this.userRepository = userRepository;
+        this.boardService = boardService;
     }
 
     @GetMapping("")
-    public List<Task> getTasksForUser() {
-        return repository.findByUserEmail(currentUserEmail());
+    public List<TaskDto> getTasksForUser() {
+        return repository.findByUserEmail(currentUserEmail()).stream()
+                .map(TaskDto::from)
+                .toList();
     }
 
     @GetMapping("/{id}")
-    public Task getTaskById(@PathVariable("id") int id) {
-        return findOwnTask(id);
+    public TaskDto getTaskById(@PathVariable("id") int id) {
+        return TaskDto.from(findOwnTask(id));
     }
 
     @PostMapping("")
-    public ResponseEntity<Task> createTask(@RequestBody Task input) {
+    public ResponseEntity<TaskDto> createTask(@RequestBody TaskRequest input) {
         String email = currentUserEmail();
         LOG.info("Creating task for user '{}'", email);
 
+        if (input.columnId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "columnId is required");
+        }
+        BoardColumn column = boardService.findOwnColumn(input.columnId(), email);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        // Only take the editable fields, so a client can't set id, owner or timestamps.
         Task task = new Task();
         copyEditableFields(input, task);
         task.setUser(user);
+        task.setBoardColumn(column);
+        task.setPosition(repository.countByBoardColumn(column));
         repository.save(task);
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(task.getId())
                 .toUri();
-        return ResponseEntity.created(location).body(task);
+        return ResponseEntity.created(location).body(TaskDto.from(task));
     }
 
     @PutMapping("/{id}")
-    public Task updateTask(@PathVariable("id") int id, @RequestBody Task input) {
+    public TaskDto updateTask(@PathVariable("id") int id, @RequestBody TaskRequest input) {
         Task task = findOwnTask(id);
         copyEditableFields(input, task);
-        return repository.save(task);
+        return TaskDto.from(repository.save(task));
+    }
+
+    @PatchMapping("/{id}/move")
+    public TaskDto moveTask(@PathVariable("id") int id, @RequestBody MoveTaskRequest input) {
+        if (input.columnId() == null || input.position() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "columnId and position are required");
+        }
+        return TaskDto.from(boardService.moveTask(id, input.columnId(), input.position(), currentUserEmail()));
     }
 
     @DeleteMapping("/{id}/delete")
@@ -77,14 +97,12 @@ public class TaskController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
     }
 
-    private static void copyEditableFields(Task from, Task to) {
-        to.setTitle(from.getTitle());
-        to.setDescription(from.getDescription());
-        to.setDue_date(from.getDue_date());
-        to.setPriority(from.getPriority());
-        if (from.getStatus() != null) {
-            to.setStatus(from.getStatus());
-        }
+    // Only the editable fields are copied, so a client can't set id, owner, column or timestamps.
+    private static void copyEditableFields(TaskRequest from, Task to) {
+        to.setTitle(from.title());
+        to.setDescription(from.description());
+        to.setDue_date(from.due_date());
+        to.setPriority(from.priority());
     }
 
     private static String currentUserEmail() {
