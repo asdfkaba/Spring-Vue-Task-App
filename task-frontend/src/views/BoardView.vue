@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { VueDraggable } from 'vue-draggable-plus'
 import Button from 'primevue/button'
@@ -135,6 +135,58 @@ function askDeleteBoard(board) {
   deleteBoardVisible.value = true
 }
 
+// ---- Small screens: one column at a time, with tabs ----
+// Matches Tailwind's md breakpoint (48rem).
+const mobileQuery = window.matchMedia('(max-width: 47.99rem)')
+const isMobile = ref(mobileQuery.matches)
+const onMobileChange = (event) => (isMobile.value = event.matches)
+mobileQuery.addEventListener('change', onMobileChange)
+onBeforeUnmount(() => mobileQuery.removeEventListener('change', onMobileChange))
+
+const boardScroller = ref(null)
+const scrolledColumnId = ref(null)
+const activeColumnId = computed(() => scrolledColumnId.value ?? store.columns[0]?.id ?? null)
+
+// The column whose left edge is closest to the board's left edge is the one in view.
+function updateActiveColumn() {
+  const scroller = boardScroller.value
+  if (!scroller) return
+  const left = scroller.getBoundingClientRect().left + parseFloat(getComputedStyle(scroller).paddingLeft)
+  let closest = null
+  let distance = Infinity
+  for (const el of scroller.querySelectorAll('[data-column-id]')) {
+    const d = Math.abs(el.getBoundingClientRect().left - left)
+    if (d < distance) {
+      distance = d
+      closest = Number(el.dataset.columnId)
+    }
+  }
+  scrolledColumnId.value = closest
+}
+
+function scrollToColumn(id) {
+  boardScroller.value
+    ?.querySelector(`[data-column-id="${id}"]`)
+    ?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+}
+
+// Keep the active tab visible in the tab bar.
+const tabBar = ref(null)
+watch(activeColumnId, async (id) => {
+  await nextTick()
+  tabBar.value?.querySelector(`[data-tab-column-id="${id}"]`)?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+})
+
+// A different board starts at its first column.
+watch(
+  () => store.board?.id,
+  () => (scrolledColumnId.value = null),
+)
+
+function neighbours(index) {
+  return { left: store.columns[index - 1] ?? null, right: store.columns[index + 1] ?? null }
+}
+
 function onBoardDeleted(board) {
   if (route.params.slug === board.slug) router.replace({ name: 'board' })
 }
@@ -250,8 +302,21 @@ const menuColumn = ref(null)
 const columnMenuItems = computed(() => {
   const column = menuColumn.value
   if (!column) return []
+  const index = store.columns.findIndex((c) => c.id === column.id)
   return [
     { label: 'Edit', icon: 'pi pi-pencil', command: () => openEditColumn(column) },
+    {
+      label: 'Move left',
+      icon: 'pi pi-arrow-left',
+      disabled: index <= 0,
+      command: () => moveColumnTo(column, index - 1),
+    },
+    {
+      label: 'Move right',
+      icon: 'pi pi-arrow-right',
+      disabled: index === store.columns.length - 1,
+      command: () => moveColumnTo(column, index + 1),
+    },
     { separator: true },
     {
       label: 'Delete',
@@ -263,6 +328,15 @@ const columnMenuItems = computed(() => {
     },
   ]
 })
+
+async function moveColumnTo(column, index) {
+  try {
+    await store.moveColumn(column.id, index)
+  } catch (err) {
+    showError('Could not move column', err)
+    await load()
+  }
+}
 
 function showColumnMenu(event, column) {
   menuColumn.value = column
@@ -331,35 +405,44 @@ function askDeleteColumn(column) {
       <BoardList @create="openCreateBoard" @delete="askDeleteBoard" @navigate="drawerVisible = false" />
     </Drawer>
 
-    <section class="flex min-w-0 flex-1 flex-col gap-6 px-4 py-8">
-      <div class="flex flex-wrap items-end justify-between gap-4">
-        <div class="flex items-start gap-2">
+    <section class="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:py-8">
+      <div class="flex items-center justify-between gap-3 md:items-end">
+        <div class="flex min-w-0 items-center gap-1 md:items-start md:gap-2">
           <Button
             icon="pi pi-bars"
             text
             rounded
             severity="secondary"
             aria-label="Show boards"
-            class="-ml-2 md:!hidden"
+            class="-ml-2 shrink-0 md:!hidden"
             @click="drawerVisible = true"
           />
-          <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900">
+          <div class="min-w-0">
+            <h1 class="truncate text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">
               {{ store.board?.name ?? 'Boards' }}
             </h1>
-            <p v-if="store.loaded" class="text-sm text-slate-500">
+            <p v-if="store.loaded" class="hidden text-sm text-slate-500 md:block">
               {{ store.taskCount }} {{ store.taskCount === 1 ? 'task' : 'tasks' }} ·
               {{ store.columns.length }} {{ store.columns.length === 1 ? 'column' : 'columns' }}
             </p>
           </div>
         </div>
-        <div v-if="store.board" class="flex gap-2">
-          <Button label="Share" icon="pi pi-share-alt" severity="secondary" outlined @click="shareDialogVisible = true" />
+        <!-- Icon-only buttons on small screens to keep the header in one line -->
+        <div v-if="store.board" class="flex shrink-0 gap-2">
+          <Button
+            :label="isMobile ? undefined : 'Share'"
+            aria-label="Share"
+            icon="pi pi-share-alt"
+            severity="secondary"
+            outlined
+            @click="shareDialogVisible = true"
+          />
           <Button
             v-if="store.columns.length"
-            label="New task"
+            :label="isMobile ? undefined : 'New task'"
+            aria-label="New task"
             icon="pi pi-plus"
-            @click="openCreateTask(store.columns[0].id)"
+            @click="openCreateTask(isMobile ? activeColumnId : store.columns[0].id)"
           />
         </div>
       </div>
@@ -378,88 +461,133 @@ function askDeleteColumn(column) {
         <Skeleton v-for="n in 3" :key="n" width="18rem" height="20rem" borderRadius="0.75rem" class="shrink-0" />
       </div>
 
-      <div v-else-if="store.loaded" class="-mx-4 overflow-x-auto px-4 pb-4">
-        <div class="flex items-start gap-4">
-          <VueDraggable
-            v-model="store.columns"
-            handle=".column-handle"
-            :animation="150"
-            ghostClass="opacity-40"
-            class="flex items-start gap-4"
-            @end="onColumnDragEnd"
+      <template v-else-if="store.loaded">
+        <!-- Small screens: tabs to jump between columns -->
+        <nav
+          ref="tabBar"
+          class="sticky top-14 z-[5] -mx-4 -mt-2 flex gap-1 overflow-x-auto border-b border-slate-200 bg-slate-50 px-4 md:hidden"
+          aria-label="Columns"
+        >
+          <button
+            v-for="column in store.columns"
+            :key="column.id"
+            type="button"
+            :data-tab-column-id="column.id"
+            class="flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm whitespace-nowrap"
+            :class="
+              column.id === activeColumnId
+                ? 'border-slate-900 font-semibold text-slate-900'
+                : 'border-transparent text-slate-500'
+            "
+            :aria-current="column.id === activeColumnId ? 'true' : undefined"
+            @click="scrollToColumn(column.id)"
           >
-            <div
-              v-for="column in store.columns"
-              :key="column.id"
-              :data-column-id="column.id"
-              class="flex w-72 shrink-0 flex-col rounded-xl bg-slate-100"
-            >
-              <header class="flex items-center gap-1 px-2 pt-2">
-                <button
-                  type="button"
-                  class="column-handle flex h-8 w-6 cursor-grab items-center justify-center text-slate-400 hover:text-slate-600 active:cursor-grabbing"
-                  aria-label="Drag to reorder column"
-                  title="Drag to reorder"
-                >
-                  <i class="pi pi-bars text-xs" />
-                </button>
-                <h2 class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700">{{ column.name }}</h2>
-                <span class="rounded-full bg-white px-2 text-xs font-medium text-slate-500">
-                  {{ store.tasksByColumn[column.id].length }}
-                </span>
-                <Button
-                  icon="pi pi-ellipsis-h"
-                  text
-                  rounded
-                  severity="secondary"
-                  size="small"
-                  aria-label="Column actions"
-                  @click="showColumnMenu($event, column)"
-                />
-              </header>
-
-              <VueDraggable
-                v-model="store.tasksByColumn[column.id]"
-                group="tasks"
-                :animation="150"
-                :delay="150"
-                :delayOnTouchOnly="true"
-                ghostClass="opacity-40"
-                class="flex min-h-16 flex-col gap-2 p-2"
-                @end="onTaskDragEnd"
-              >
-                <TaskCard
-                  v-for="task in store.tasksByColumn[column.id]"
-                  :key="task.id"
-                  :task="task"
-                  :color="column.color"
-                  @edit="openEditTask"
-                  @menu="showTaskMenu"
-                />
-              </VueDraggable>
-
-              <Button
-                label="Add task"
-                icon="pi pi-plus"
-                text
-                severity="secondary"
-                size="small"
-                class="mx-2 mb-2 justify-start"
-                @click="openCreateTask(column.id)"
-              />
-            </div>
-          </VueDraggable>
-
+            {{ column.name }}
+            <span class="rounded-full bg-slate-200 px-1.5 text-xs font-medium text-slate-600">
+              {{ store.tasksByColumn[column.id].length }}
+            </span>
+          </button>
           <button
             type="button"
-            class="flex h-12 w-72 shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 text-sm font-medium text-slate-500 hover:border-slate-400 hover:text-slate-700"
+            class="flex shrink-0 items-center px-3 py-2.5 text-slate-500"
+            aria-label="Add column"
             @click="openAddColumn"
           >
-            <i class="pi pi-plus text-xs" />
-            Add column
+            <i class="pi pi-plus text-xs" aria-hidden="true" />
           </button>
+        </nav>
+
+        <!-- On small screens each column is as wide as the screen and the board snaps to columns. -->
+        <div
+          ref="boardScroller"
+          class="-mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pb-4 md:snap-none"
+          @scroll.passive="updateActiveColumn"
+        >
+          <div class="flex items-start gap-4">
+            <VueDraggable
+              v-model="store.columns"
+              handle=".column-handle"
+              :animation="150"
+              ghostClass="opacity-40"
+              class="flex items-start gap-4"
+              @end="onColumnDragEnd"
+            >
+              <div
+                v-for="(column, index) in store.columns"
+                :key="column.id"
+                :data-column-id="column.id"
+                class="flex w-[calc(100vw-2rem)] shrink-0 snap-start flex-col rounded-xl bg-slate-100 md:w-72"
+              >
+                <header class="flex items-center gap-1 px-2 pt-2">
+                  <button
+                    type="button"
+                    class="column-handle hidden h-8 w-6 cursor-grab items-center justify-center text-slate-400 hover:text-slate-600 active:cursor-grabbing md:flex"
+                    aria-label="Drag to reorder column"
+                    title="Drag to reorder"
+                  >
+                    <i class="pi pi-bars text-xs" />
+                  </button>
+                  <h2 class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700">{{ column.name }}</h2>
+                  <span class="rounded-full bg-white px-2 text-xs font-medium text-slate-500">
+                    {{ store.tasksByColumn[column.id].length }}
+                  </span>
+                  <Button
+                    icon="pi pi-ellipsis-h"
+                    text
+                    rounded
+                    severity="secondary"
+                    size="small"
+                    aria-label="Column actions"
+                    @click="showColumnMenu($event, column)"
+                  />
+                </header>
+
+                <VueDraggable
+                  v-model="store.tasksByColumn[column.id]"
+                  group="tasks"
+                  :animation="150"
+                  :delay="150"
+                  :delayOnTouchOnly="true"
+                  ghostClass="opacity-40"
+                  class="flex min-h-16 flex-col gap-2 p-2"
+                  @end="onTaskDragEnd"
+                >
+                  <TaskCard
+                    v-for="task in store.tasksByColumn[column.id]"
+                    :key="task.id"
+                    :task="task"
+                    :color="column.color"
+                    :leftColumn="neighbours(index).left"
+                    :rightColumn="neighbours(index).right"
+                    @edit="openEditTask"
+                    @menu="showTaskMenu"
+                    @move="moveTaskTo"
+                  />
+                </VueDraggable>
+
+                <Button
+                  label="Add task"
+                  icon="pi pi-plus"
+                  text
+                  severity="secondary"
+                  size="small"
+                  class="mx-2 mb-2 justify-start"
+                  @click="openCreateTask(column.id)"
+                />
+              </div>
+            </VueDraggable>
+
+            <button
+              type="button"
+              class="flex h-12 w-[calc(100vw-2rem)] shrink-0 snap-start items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 text-sm font-medium text-slate-500 hover:border-slate-400 hover:text-slate-700 md:w-72"
+              @click="openAddColumn"
+            >
+              <i class="pi pi-plus text-xs" aria-hidden="true" />
+              Add column
+            </button>
+          </div>
         </div>
-      </div>
+      </template>
 
       <Menu ref="taskMenu" :model="taskMenuItems" popup />
       <Menu ref="columnMenu" :model="columnMenuItems" popup />

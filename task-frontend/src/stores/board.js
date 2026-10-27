@@ -211,7 +211,16 @@ export const useBoardStore = defineStore('board', {
       return updated
     },
 
-    // Saves the place the column now has in columns (after drag & drop).
+    // Moves a column locally (e.g. from its menu) and then saves it.
+    async moveColumn(id, index) {
+      const from = this.columns.findIndex((c) => c.id === id)
+      if (from === -1) return
+      const [column] = this.columns.splice(from, 1)
+      this.columns.splice(index, 0, column)
+      await this.persistColumnMove(id)
+    },
+
+    // Saves the place the column now has in columns (after drag & drop or moveColumn).
     async persistColumnMove(id) {
       const index = this.columns.findIndex((c) => c.id === id)
       if (index === -1) return
