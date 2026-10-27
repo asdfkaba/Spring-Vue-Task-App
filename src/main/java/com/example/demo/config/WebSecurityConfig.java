@@ -133,6 +133,8 @@ public class WebSecurityConfig {
                 .authorizeRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/login**", "/auth/**", "/error", "/health", "/").permitAll()
+                        // Read-only share links work without login.
+                        .requestMatchers(HttpMethod.GET, "/share/*").permitAll()
                         .anyRequest().authenticated()            // Require auth for everything else, including /token
                 ).addFilterBefore(new JwtCookieAuthenticationFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
         return http.build();

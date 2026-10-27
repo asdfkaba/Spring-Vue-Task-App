@@ -16,6 +16,7 @@ import ColumnDeleteDialog from '@/components/ColumnDeleteDialog.vue'
 import BoardList from '@/components/BoardList.vue'
 import BoardDialog from '@/components/BoardDialog.vue'
 import BoardDeleteDialog from '@/components/BoardDeleteDialog.vue'
+import ShareDialog from '@/components/ShareDialog.vue'
 
 const store = useBoardStore()
 const route = useRoute()
@@ -119,6 +120,7 @@ watch(sidebarCollapsed, (collapsed) => writeStorage(SIDEBAR_KEY, collapsed ? '1'
 const drawerVisible = ref(false)
 
 const boardDialogVisible = ref(false)
+const shareDialogVisible = ref(false)
 const deleteBoardVisible = ref(false)
 const deletingBoard = ref(null)
 
@@ -351,12 +353,15 @@ function askDeleteColumn(column) {
             </p>
           </div>
         </div>
-        <Button
-          v-if="store.columns.length"
-          label="New task"
-          icon="pi pi-plus"
-          @click="openCreateTask(store.columns[0].id)"
-        />
+        <div v-if="store.board" class="flex gap-2">
+          <Button label="Share" icon="pi pi-share-alt" severity="secondary" outlined @click="shareDialogVisible = true" />
+          <Button
+            v-if="store.columns.length"
+            label="New task"
+            icon="pi pi-plus"
+            @click="openCreateTask(store.columns[0].id)"
+          />
+        </div>
       </div>
 
       <div
@@ -462,6 +467,7 @@ function askDeleteColumn(column) {
       <ColumnDialog v-model:visible="columnDialogVisible" :column="editingColumn" />
       <ColumnDeleteDialog v-model:visible="deleteDialogVisible" :column="deletingColumn" />
       <BoardDialog v-model:visible="boardDialogVisible" />
+      <ShareDialog v-model:visible="shareDialogVisible" :board="store.board" />
       <BoardDeleteDialog v-model:visible="deleteBoardVisible" :board="deletingBoard" @deleted="onBoardDeleted" />
     </section>
   </div>

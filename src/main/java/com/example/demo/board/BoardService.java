@@ -40,13 +40,16 @@ public class BoardService {
     private final BoardColumnRepository columnRepository;
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final BoardShareRepository shareRepository;
 
     public BoardService(BoardRepository boardRepository, BoardColumnRepository columnRepository,
-                        TaskRepository taskRepository, UserRepository userRepository) {
+                        TaskRepository taskRepository, UserRepository userRepository,
+                        BoardShareRepository shareRepository) {
         this.boardRepository = boardRepository;
         this.columnRepository = columnRepository;
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
+        this.shareRepository = shareRepository;
     }
 
     // The board every new user starts with.
@@ -66,6 +69,7 @@ public class BoardService {
     @Transactional
     public void deleteBoard(int boardId, String email) {
         Board board = findOwnBoard(boardId, email);
+        shareRepository.deleteByBoard(board);
         taskRepository.deleteAll(taskRepository.findByBoardInOrder(board));
         columnRepository.deleteAll(columnRepository.findByBoardOrderByPosition(board));
         boardRepository.delete(board);
@@ -110,13 +114,20 @@ public class BoardService {
     @Transactional(readOnly = true)
     public BoardDetail getBoard(int boardId, String email) {
         Board board = findOwnBoard(boardId, email);
-        List<ColumnDto> columns = columnRepository.findByBoardOrderByPosition(board).stream()
+        return new BoardDetail(board.getId(), board.getName(), board.getSlug(), columnsOf(board), tasksOf(board));
+    }
+
+    List<ColumnDto> columnsOf(Board board) {
+        return columnRepository.findByBoardOrderByPosition(board).stream()
                 .map(ColumnDto::from)
                 .toList();
-        List<TaskDto> tasks = taskRepository.findByBoardInOrder(board).stream()
+    }
+
+    // Sorted by column position, then by position within the column.
+    List<TaskDto> tasksOf(Board board) {
+        return taskRepository.findByBoardInOrder(board).stream()
                 .map(TaskDto::from)
                 .toList();
-        return new BoardDetail(board.getId(), board.getName(), board.getSlug(), columns, tasks);
     }
 
     @Transactional
@@ -234,7 +245,7 @@ public class BoardService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Column not found"));
     }
 
-    private Board findOwnBoard(int boardId, String email) {
+    Board findOwnBoard(int boardId, String email) {
         return boardRepository.findByIdAndUserEmail(boardId, email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Board not found"));
     }

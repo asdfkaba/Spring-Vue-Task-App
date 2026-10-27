@@ -3,6 +3,7 @@ package com.example.demo.board;
 import com.example.demo.task.TaskDto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public final class BoardDtos {
@@ -17,6 +18,19 @@ public final class BoardDtos {
 
     // Columns are sorted by position, tasks by column position and then by their own position.
     public record BoardDetail(Integer id, String name, String slug, List<ColumnDto> columns, List<TaskDto> tasks) {
+    }
+
+    /**
+     * What a share link shows. Kept separate from BoardDetail on purpose, so fields added
+     * for the owner later don't become public by accident.
+     */
+    public record SharedBoard(String name, List<ColumnDto> columns, List<TaskDto> tasks) {
+    }
+
+    public record ShareDto(String token, LocalDateTime created) {
+        static ShareDto from(BoardShare share) {
+            return new ShareDto(share.getToken().toString(), share.getCreated());
+        }
     }
 
     public record ColumnDto(Integer id, String name, String color, int position) {
