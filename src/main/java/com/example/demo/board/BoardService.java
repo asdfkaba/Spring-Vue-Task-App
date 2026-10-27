@@ -71,8 +71,30 @@ public class BoardService {
         boardRepository.delete(board);
     }
 
+    /** Adds slugs to boards that don't have one yet; returns how many were filled. */
+    @Transactional
+    public int fillMissingSlugs() {
+        List<Board> boards = boardRepository.findBySlugIsNullOrderById();
+        for (Board board : boards) {
+            board.setSlug(uniqueSlug(board.getUser(), board.getName()));
+        }
+        return boards.size();
+    }
+
+    // "mein-board", or "mein-board-2", "-3", ... if the user already has a board with that slug.
+    private String uniqueSlug(User user, String name) {
+        String base = BoardSlugs.fromName(name);
+        String slug = base;
+        for (int n = 2; boardRepository.existsByUserAndSlug(user, slug); n++) {
+            slug = base + "-" + n;
+        }
+        return slug;
+    }
+
     private Board createBoardWithDefaultColumns(User user, String name) {
-        Board board = boardRepository.save(new Board(name, user));
+        Board board = new Board(name, user);
+        board.setSlug(uniqueSlug(user, name));
+        boardRepository.save(board);
         for (int i = 0; i < DEFAULT_COLUMNS.size(); i++) {
             DefaultColumn template = DEFAULT_COLUMNS.get(i);
             columnRepository.save(new BoardColumn(template.name(), template.color(), i, board));
@@ -94,7 +116,7 @@ public class BoardService {
         List<TaskDto> tasks = taskRepository.findByBoardInOrder(board).stream()
                 .map(TaskDto::from)
                 .toList();
-        return new BoardDetail(board.getId(), board.getName(), columns, tasks);
+        return new BoardDetail(board.getId(), board.getName(), board.getSlug(), columns, tasks);
     }
 
     @Transactional

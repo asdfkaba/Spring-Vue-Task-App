@@ -35,7 +35,7 @@ async function save() {
   try {
     const board = await store.createBoard(name.value.trim())
     visible.value = false
-    router.push({ name: 'board', params: { id: board.id } })
+    router.push({ name: 'board', params: { slug: board.slug } })
   } catch (err) {
     toast.add({ severity: 'error', summary: 'Could not create board', detail: err.message, life: 5000 })
   } finally {

@@ -54,7 +54,8 @@ function handleLoadError(summary, err) {
   showError(summary, err)
 }
 
-// Opens the board from the URL. Without an id, it opens the last used board, or else the first one.
+// Opens the board from the URL slug. Without one, it opens the last used board, or else the first one.
+// The board list maps the slug to the id the API works with.
 async function openBoardFromRoute() {
   if (route.name !== 'board') return
   try {
@@ -64,27 +65,28 @@ async function openBoardFromRoute() {
     return
   }
 
-  const id = Number(route.params.id) || null
-  if (id === null) {
+  const slug = route.params.slug
+  if (!slug) {
     const last = Number(readStorage(LAST_BOARD_KEY))
     const target = store.boards.find((b) => b.id === last) ?? store.boards[0]
     if (target) {
-      router.replace({ name: 'board', params: { id: target.id } })
+      router.replace({ name: 'board', params: { slug: target.slug } })
     } else {
       store.closeBoard()
     }
     return
   }
 
-  if (!store.boards.some((b) => b.id === id)) {
+  const board = store.boards.find((b) => b.slug === slug)
+  if (!board) {
     toast.add({ severity: 'warn', summary: 'Board not found', life: 4000 })
     router.replace({ name: 'board' })
     return
   }
 
-  writeStorage(LAST_BOARD_KEY, String(id))
+  writeStorage(LAST_BOARD_KEY, String(board.id))
   try {
-    await store.fetchBoard(id)
+    await store.fetchBoard(board.id)
   } catch (err) {
     if (err.status === 404) {
       // Deleted in the meantime, e.g. in another tab.
@@ -96,7 +98,7 @@ async function openBoardFromRoute() {
   }
 }
 
-watch(() => route.params.id, openBoardFromRoute, { immediate: true })
+watch(() => route.params.slug, openBoardFromRoute, { immediate: true })
 
 // Puts the open board back to the server state, e.g. after a failed move.
 async function load() {
@@ -132,7 +134,7 @@ function askDeleteBoard(board) {
 }
 
 function onBoardDeleted(board) {
-  if (Number(route.params.id) === board.id) router.replace({ name: 'board' })
+  if (route.params.slug === board.slug) router.replace({ name: 'board' })
 }
 
 // ---- Drag & drop ----

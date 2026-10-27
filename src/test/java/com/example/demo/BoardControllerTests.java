@@ -98,12 +98,14 @@ class BoardControllerTests {
     void createBoardReturnsSummary() throws Exception {
         Board created = new Board("Side project", null);
         created.setId(5);
+        created.setSlug("side-project");
         when(boardService.createBoard(ALICE, "Side project")).thenReturn(created);
 
         mockMvc.perform(post("/boards").contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Side project\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(5))
-                .andExpect(jsonPath("$.name").value("Side project"));
+                .andExpect(jsonPath("$.name").value("Side project"))
+                .andExpect(jsonPath("$.slug").value("side-project"));
     }
 
     @Test

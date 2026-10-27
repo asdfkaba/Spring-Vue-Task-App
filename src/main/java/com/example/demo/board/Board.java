@@ -7,7 +7,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "board")
+// The slug is unique per user; null only for boards from before slugs existed, until startup fills it in.
+@Table(name = "board", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "slug"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,6 +19,10 @@ public class Board {
 
     @Column(nullable = false)
     private String name;
+
+    // Readable URL part made from the name, e.g. "mein-board". Stays the same once created.
+    @Column(length = 60)
+    private String slug;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id")

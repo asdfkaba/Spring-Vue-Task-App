@@ -10,8 +10,9 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
-      // Without an id the view opens the last used (or first) board.
-      path: '/boards/:id?',
+      // :slug is the readable name part, e.g. /boards/mein-board. Without it the view
+      // opens the last used (or first) board.
+      path: '/boards/:slug?',
       name: 'board',
       component: () => import('../views/BoardView.vue'),
       // Sidebar and board use the full window width.

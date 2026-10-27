@@ -413,4 +413,40 @@ class BoardServiceTests {
                 .satisfies(e -> assertStatus(e, HttpStatus.NOT_FOUND));
         assertThat(boardRepository.findById(board.getId())).isPresent();
     }
+
+    @Test
+    void boardsGetSlugsUniquePerUser() {
+        Board second = boardService.createBoard(ALICE, "My Board!");
+        Board third = boardService.createBoard(ALICE, "my board");
+        userRepository.save(new User("Bob", BOB, null));
+        Board bobs = boardService.createBoard(BOB, "My board");
+
+        assertThat(board.getSlug()).isEqualTo("my-board");
+        assertThat(second.getSlug()).isEqualTo("my-board-2");
+        assertThat(third.getSlug()).isEqualTo("my-board-3");
+        assertThat(bobs.getSlug()).isEqualTo("my-board");
+    }
+
+    @Test
+    void missingSlugsAreFilledInWithoutClashes() {
+        Board other = boardService.createBoard(ALICE, "My board");
+        board.setSlug(null);
+        other.setSlug(null);
+        em.flush();
+
+        int filled = boardService.fillMissingSlugs();
+        em.flush();
+        em.clear();
+
+        assertThat(filled).isEqualTo(2);
+        assertThat(boardService.boardsOf(ALICE))
+                .extracting(Board::getSlug)
+                .containsExactly("my-board", "my-board-2");
+        assertThat(boardService.fillMissingSlugs()).isZero();
+    }
+
+    @Test
+    void boardDetailCarriesTheSlug() {
+        assertThat(boardService.getBoard(board.getId(), ALICE).slug()).isEqualTo("my-board");
+    }
 }

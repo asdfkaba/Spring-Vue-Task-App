@@ -14,7 +14,7 @@ const store = useBoardStore()
     <ul class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
       <li v-for="board in store.boards" :key="board.id" class="group relative">
         <RouterLink
-          :to="{ name: 'board', params: { id: board.id } }"
+          :to="{ name: 'board', params: { slug: board.slug } }"
           class="flex items-center gap-2 rounded-lg py-2 pr-9 pl-3 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
           active-class="bg-slate-100 font-semibold !text-slate-900"
           @click="emit('navigate')"
