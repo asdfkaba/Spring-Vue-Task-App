@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import com.example.demo.auth.jwt.TokenService;
+import com.example.demo.board.BoardService;
 import com.example.demo.config.WebSecurityConfig;
 import com.example.demo.task.TaskController;
 import com.example.demo.task.TaskRepository;
@@ -34,6 +35,9 @@ class SecurityTests {
 
     @MockBean
     TokenService tokenService;
+
+    @MockBean
+    BoardService boardService;
 
     @Test
     void ohneLoginKeinZugriff() throws Exception {

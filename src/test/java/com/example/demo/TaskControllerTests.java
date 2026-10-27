@@ -1,6 +1,9 @@
 package com.example.demo;
 
 import com.example.demo.auth.jwt.TokenService;
+import com.example.demo.board.Board;
+import com.example.demo.board.BoardColumn;
+import com.example.demo.board.BoardService;
 import com.example.demo.config.WebSecurityConfig;
 import com.example.demo.task.Task;
 import com.example.demo.task.TaskController;
@@ -17,6 +20,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -50,12 +55,22 @@ class TaskControllerTests {
     @MockBean
     TokenService tokenService;
 
+    @MockBean
+    BoardService boardService;
+
+    private BoardColumn aliceColumn() {
+        BoardColumn column = new BoardColumn("To do", null, 0, new Board("My board", new User("Alice", ALICE, null)));
+        column.setId(10);
+        return column;
+    }
+
     private Task aliceTask() {
         User alice = new User("Alice", ALICE, null);
         Task task = new Task("Old title", LocalDateTime.of(2026, 10, 27, 12, 0), null, "Old description", 1);
         task.setId(1);
         task.setCreated(LocalDateTime.of(2026, 10, 1, 9, 0));
         task.setUser(alice);
+        task.setBoardColumn(aliceColumn());
         return task;
     }
 
@@ -69,15 +84,17 @@ class TaskControllerTests {
                         .content("""
                                 {"title":"New title","description":"New description",
                                  "due_date":"2026-11-02T09:30:00","priority":3,"status":"DONE",
-                                 "created":null}
+                                 "created":null,"columnId":99}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("New title"));
+                .andExpect(jsonPath("$.title").value("New title"))
+                .andExpect(jsonPath("$.columnId").value(10));
 
         ArgumentCaptor<Task> saved = ArgumentCaptor.forClass(Task.class);
         verify(taskRepository).save(saved.capture());
         assertThat(saved.getValue().getDue_date()).isEqualTo(LocalDateTime.of(2026, 11, 2, 9, 30));
-        assertThat(saved.getValue().getStatus()).isEqualTo("DONE");
+        // PUT does not move tasks; that is what /move is for.
+        assertThat(saved.getValue().getBoardColumn().getId()).isEqualTo(10);
         assertThat(saved.getValue().getPriority()).isEqualTo(3);
         assertThat(saved.getValue().getCreated()).isEqualTo(LocalDateTime.of(2026, 10, 1, 9, 0));
         assertThat(saved.getValue().getUser().getEmail()).isEqualTo(ALICE);
@@ -143,18 +160,68 @@ class TaskControllerTests {
 
     @Test
     void createIgnoresIdFromBodySoPostCannotOverwrite() throws Exception {
+        BoardColumn column = aliceColumn();
         when(userRepository.findByEmail(ALICE)).thenReturn(Optional.of(new User("Alice", ALICE, null)));
+        when(boardService.findOwnColumn(10, ALICE)).thenReturn(column);
+        when(taskRepository.countByBoardColumn(column)).thenReturn(2);
 
         mockMvc.perform(post("/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"id\":2,\"title\":\"New task\",\"priority\":2}"))
-                .andExpect(status().isCreated());
+                        .content("{\"id\":2,\"title\":\"New task\",\"priority\":2,\"columnId\":10}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.columnId").value(10))
+                .andExpect(jsonPath("$.position").value(2));
 
         ArgumentCaptor<Task> saved = ArgumentCaptor.forClass(Task.class);
         verify(taskRepository).save(saved.capture());
         assertThat(saved.getValue().getId()).isNull();
         assertThat(saved.getValue().getTitle()).isEqualTo("New task");
-        assertThat(saved.getValue().getStatus()).isEqualTo("TODO");
         assertThat(saved.getValue().getUser().getEmail()).isEqualTo(ALICE);
+    }
+
+    @Test
+    void createRequiresColumn() throws Exception {
+        mockMvc.perform(post("/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"New task\"}"))
+                .andExpect(status().isBadRequest());
+
+        verify(taskRepository, never()).save(any());
+    }
+
+    @Test
+    void cannotCreateTaskInColumnOfOtherUser() throws Exception {
+        when(boardService.findOwnColumn(20, ALICE))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Column not found"));
+
+        mockMvc.perform(post("/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"New task\",\"columnId\":20}"))
+                .andExpect(status().isNotFound());
+
+        verify(taskRepository, never()).save(any());
+    }
+
+    @Test
+    void moveDelegatesToBoardService() throws Exception {
+        Task task = aliceTask();
+        task.setPosition(3);
+        when(boardService.moveTask(1, 10, 3, ALICE)).thenReturn(task);
+
+        mockMvc.perform(patch("/tasks/1/move")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"columnId\":10,\"position\":3}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.position").value(3));
+    }
+
+    @Test
+    void moveRequiresColumnAndPosition() throws Exception {
+        mockMvc.perform(patch("/tasks/1/move")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"columnId\":10}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(boardService);
     }
 }

@@ -1,0 +1,360 @@
+package com.example.demo;
+
+import com.example.demo.board.*;
+import com.example.demo.task.Task;
+import com.example.demo.task.TaskRepository;
+import com.example.demo.user.User;
+import com.example.demo.user.UserRepository;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.groups.Tuple.tuple;
+
+// Runs against H2 so the ordering logic is checked with real queries.
+@DataJpaTest
+@Import(BoardService.class)
+class BoardServiceTests {
+
+    static final String ALICE = "alice@example.com";
+    static final String BOB = "bob@example.com";
+
+    @Autowired
+    BoardService boardService;
+    @Autowired
+    UserRepository userRepository;
+    @Autowired
+    BoardColumnRepository columnRepository;
+    @Autowired
+    TaskRepository taskRepository;
+    @Autowired
+    EntityManager em;
+
+    Board board;
+    BoardColumn todo;
+    BoardColumn doing;
+    BoardColumn done;
+
+    @BeforeEach
+    void setUp() {
+        User alice = userRepository.save(new User("Alice", ALICE, null));
+        board = boardService.createDefaultBoard(alice);
+        List<BoardColumn> columns = columnRepository.findByBoardOrderByPosition(board);
+        todo = columns.get(0);
+        doing = columns.get(1);
+        done = columns.get(2);
+    }
+
+    private Task addTask(String title, BoardColumn column) {
+        Task task = new Task();
+        task.setTitle(title);
+        task.setUser(column.getBoard().getUser());
+        task.setBoardColumn(column);
+        task.setPosition(taskRepository.countByBoardColumn(column));
+        return taskRepository.save(task);
+    }
+
+    private List<String> titlesIn(BoardColumn column) {
+        em.flush();
+        em.clear();
+        BoardColumn fresh = columnRepository.findById(column.getId()).orElseThrow();
+        List<Task> tasks = taskRepository.findByBoardColumnOrderByPosition(fresh);
+        for (int i = 0; i < tasks.size(); i++) {
+            assertThat(tasks.get(i).getPosition()).as("positions have no gaps").isEqualTo(i);
+        }
+        return tasks.stream().map(Task::getTitle).toList();
+    }
+
+    private static void assertStatus(Throwable e, HttpStatus status) {
+        assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(status);
+    }
+
+    @Test
+    void defaultBoardHasThreeColumnsInOrder() {
+        assertThat(columnRepository.findByBoardOrderByPosition(board))
+                .extracting(BoardColumn::getName, BoardColumn::getPosition)
+                .containsExactly(
+                        tuple("To do", 0),
+                        tuple("In progress", 1),
+                        tuple("Done", 2));
+    }
+
+    @Test
+    void moveWithinColumnReorders() {
+        Task a = addTask("A", todo);
+        addTask("B", todo);
+        addTask("C", todo);
+
+        boardService.moveTask(a.getId(), todo.getId(), 2, ALICE);
+
+        assertThat(titlesIn(todo)).containsExactly("B", "C", "A");
+    }
+
+    @Test
+    void moveToOtherColumnRenumbersBoth() {
+        addTask("A", todo);
+        Task b = addTask("B", todo);
+        addTask("C", todo);
+        addTask("X", doing);
+        addTask("Y", doing);
+
+        boardService.moveTask(b.getId(), doing.getId(), 1, ALICE);
+
+        assertThat(titlesIn(todo)).containsExactly("A", "C");
+        assertThat(titlesIn(doing)).containsExactly("X", "B", "Y");
+    }
+
+    @Test
+    void movePositionBeyondEndPutsTaskLast() {
+        Task a = addTask("A", todo);
+        addTask("X", doing);
+
+        boardService.moveTask(a.getId(), doing.getId(), 99, ALICE);
+
+        assertThat(titlesIn(doing)).containsExactly("X", "A");
+    }
+
+    @Test
+    void cannotMoveIntoColumnOfOtherUser() {
+        User bob = userRepository.save(new User("Bob", BOB, null));
+        BoardColumn bobsColumn = columnRepository.findByBoardOrderByPosition(boardService.createDefaultBoard(bob)).get(0);
+        Task a = addTask("A", todo);
+
+        assertThatThrownBy(() -> boardService.moveTask(a.getId(), bobsColumn.getId(), 0, ALICE))
+                .satisfies(e -> assertStatus(e, HttpStatus.NOT_FOUND));
+        assertThat(titlesIn(todo)).containsExactly("A");
+    }
+
+    @Test
+    void cannotMoveTaskOfOtherUser() {
+        Task a = addTask("A", todo);
+
+        assertThatThrownBy(() -> boardService.moveTask(a.getId(), doing.getId(), 0, BOB))
+                .satisfies(e -> assertStatus(e, HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void cannotMoveToOtherBoard() {
+        User alice = userRepository.findByEmail(ALICE).orElseThrow();
+        BoardColumn otherBoardColumn = columnRepository
+                .findByBoardOrderByPosition(boardService.createDefaultBoard(alice)).get(0);
+        Task a = addTask("A", todo);
+
+        assertThatThrownBy(() -> boardService.moveTask(a.getId(), otherBoardColumn.getId(), 0, ALICE))
+                .satisfies(e -> assertStatus(e, HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void deletingNonEmptyColumnNeedsAChoice() {
+        addTask("A", todo);
+
+        assertThatThrownBy(() -> boardService.deleteColumn(todo.getId(), ALICE, null, false))
+                .satisfies(e -> assertStatus(e, HttpStatus.CONFLICT));
+        assertThat(columnRepository.findById(todo.getId())).isPresent();
+    }
+
+    @Test
+    void deleteColumnMovesTasksToEndOfTarget() {
+        addTask("A", todo);
+        addTask("B", todo);
+        addTask("X", done);
+
+        boardService.deleteColumn(todo.getId(), ALICE, done.getId(), false);
+
+        assertThat(titlesIn(done)).containsExactly("X", "A", "B");
+        assertThat(columnRepository.findByBoardOrderByPosition(board))
+                .extracting(BoardColumn::getName, BoardColumn::getPosition)
+                .containsExactly(
+                        tuple("In progress", 0),
+                        tuple("Done", 1));
+    }
+
+    @Test
+    void deleteColumnWithTasks() {
+        Task a = addTask("A", todo);
+
+        boardService.deleteColumn(todo.getId(), ALICE, null, true);
+        em.flush();
+
+        assertThat(taskRepository.findById(a.getId())).isEmpty();
+        assertThat(columnRepository.findById(todo.getId())).isEmpty();
+    }
+
+    @Test
+    void deleteEmptyColumnNeedsNoChoice() {
+        boardService.deleteColumn(doing.getId(), ALICE, null, false);
+
+        assertThat(columnRepository.findByBoardOrderByPosition(board))
+                .extracting(BoardColumn::getName)
+                .containsExactly("To do", "Done");
+    }
+
+    @Test
+    void cannotMoveTasksIntoDeletedColumnItself() {
+        addTask("A", todo);
+
+        assertThatThrownBy(() -> boardService.deleteColumn(todo.getId(), ALICE, todo.getId(), false))
+                .satisfies(e -> assertStatus(e, HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void cannotMoveTasksIntoColumnOfOtherUser() {
+        User bob = userRepository.save(new User("Bob", BOB, null));
+        BoardColumn bobsColumn = columnRepository.findByBoardOrderByPosition(boardService.createDefaultBoard(bob)).get(0);
+        addTask("A", todo);
+
+        assertThatThrownBy(() -> boardService.deleteColumn(todo.getId(), ALICE, bobsColumn.getId(), false))
+                .satisfies(e -> assertStatus(e, HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void cannotDeleteLastColumn() {
+        boardService.deleteColumn(doing.getId(), ALICE, null, false);
+        boardService.deleteColumn(done.getId(), ALICE, null, false);
+
+        assertThatThrownBy(() -> boardService.deleteColumn(todo.getId(), ALICE, null, false))
+                .satisfies(e -> assertStatus(e, HttpStatus.CONFLICT));
+    }
+
+    @Test
+    void cannotDeleteColumnOfOtherUser() {
+        assertThatThrownBy(() -> boardService.deleteColumn(todo.getId(), BOB, null, true))
+                .satisfies(e -> assertStatus(e, HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void addColumnTrimsNameAndAppends() {
+        BoardColumn added = boardService.addColumn(board.getId(), ALICE, "  Review ", null);
+
+        assertThat(added.getName()).isEqualTo("Review");
+        assertThat(added.getPosition()).isEqualTo(3);
+    }
+
+    @Test
+    void columnNameMustNotBeBlankOrTooLong() {
+        assertThatThrownBy(() -> boardService.addColumn(board.getId(), ALICE, "   ", null))
+                .satisfies(e -> assertStatus(e, HttpStatus.BAD_REQUEST));
+        assertThatThrownBy(() -> boardService.updateColumn(todo.getId(), ALICE, patchName("x".repeat(51))))
+                .satisfies(e -> assertStatus(e, HttpStatus.BAD_REQUEST));
+    }
+
+    private static BoardDtos.ColumnPatch patchName(String name) {
+        return new BoardDtos.ColumnPatch(name, false, null, null);
+    }
+
+    private static BoardDtos.ColumnPatch patchColor(String color) {
+        return new BoardDtos.ColumnPatch(null, true, color, null);
+    }
+
+    private static BoardDtos.ColumnPatch patchPosition(int position) {
+        return new BoardDtos.ColumnPatch(null, false, null, position);
+    }
+
+    private List<String> columnNames() {
+        em.flush();
+        em.clear();
+        List<BoardColumn> columns = columnRepository.findByBoardOrderByPosition(board);
+        for (int i = 0; i < columns.size(); i++) {
+            assertThat(columns.get(i).getPosition()).as("positions have no gaps").isEqualTo(i);
+        }
+        return columns.stream().map(BoardColumn::getName).toList();
+    }
+
+    @Test
+    void moveColumnForwardShiftsColumnsInBetween() {
+        boardService.addColumn(board.getId(), ALICE, "Review", null);
+        BoardColumn review = columnRepository.findByBoardOrderByPosition(board).get(3);
+
+        boardService.updateColumn(review.getId(), ALICE, patchPosition(0));
+
+        assertThat(columnNames()).containsExactly("Review", "To do", "In progress", "Done");
+    }
+
+    @Test
+    void moveColumnBackward() {
+        boardService.updateColumn(todo.getId(), ALICE, patchPosition(1));
+
+        assertThat(columnNames()).containsExactly("In progress", "To do", "Done");
+    }
+
+    @Test
+    void moveColumnBeyondEndPutsItLast() {
+        boardService.updateColumn(todo.getId(), ALICE, patchPosition(99));
+
+        assertThat(columnNames()).containsExactly("In progress", "Done", "To do");
+    }
+
+    @Test
+    void movingColumnKeepsItsTasks() {
+        addTask("A", todo);
+
+        boardService.updateColumn(todo.getId(), ALICE, patchPosition(2));
+
+        assertThat(titlesIn(todo)).containsExactly("A");
+    }
+
+    @Test
+    void cannotUpdateColumnOfOtherUser() {
+        assertThatThrownBy(() -> boardService.updateColumn(todo.getId(), BOB, patchName("Hijacked")))
+                .satisfies(e -> assertStatus(e, HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void patchOnlyChangesGivenFields() {
+        boardService.updateColumn(todo.getId(), ALICE, patchName("Backlog"));
+        em.flush();
+        em.clear();
+
+        BoardColumn column = columnRepository.findById(todo.getId()).orElseThrow();
+        assertThat(column.getName()).isEqualTo("Backlog");
+        assertThat(column.getColor()).isEqualTo("#64748b");
+        assertThat(column.getPosition()).isEqualTo(0);
+    }
+
+    @Test
+    void colorIsStoredLowerCaseAndCanBeRemoved() {
+        boardService.updateColumn(todo.getId(), ALICE, patchColor("#AABBCC"));
+        assertThat(todo.getColor()).isEqualTo("#aabbcc");
+
+        boardService.updateColumn(todo.getId(), ALICE, patchColor(null));
+        assertThat(todo.getColor()).isNull();
+    }
+
+    @Test
+    void invalidColorIsRejected() {
+        assertThatThrownBy(() -> boardService.updateColumn(todo.getId(), ALICE, patchColor("red")))
+                .satisfies(e -> assertStatus(e, HttpStatus.BAD_REQUEST));
+        assertThatThrownBy(() -> boardService.addColumn(board.getId(), ALICE, "Review", "#12345"))
+                .satisfies(e -> assertStatus(e, HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void cannotReadBoardOfOtherUser() {
+        assertThatThrownBy(() -> boardService.getBoard(board.getId(), BOB))
+                .satisfies(e -> assertStatus(e, HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void boardDetailListsTasksInColumnOrder() {
+        addTask("D", done);
+        addTask("A", todo);
+        addTask("B", todo);
+        em.flush();
+        em.clear();
+
+        BoardDtos.BoardDetail detail = boardService.getBoard(board.getId(), ALICE);
+
+        assertThat(detail.columns()).extracting(BoardDtos.ColumnDto::name)
+                .containsExactly("To do", "In progress", "Done");
+        assertThat(detail.tasks()).extracting(t -> t.title()).containsExactly("A", "B", "D");
+    }
+}

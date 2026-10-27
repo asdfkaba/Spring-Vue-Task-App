@@ -1,17 +1,19 @@
 <script setup>
-import { RouterView, useRouter } from 'vue-router'
-import { onMounted, watch } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, watch } from 'vue'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Button from 'primevue/button'
 import { useToast } from 'primevue/usetoast'
-import { useTaskStore } from '@/stores/tasks'
+import { useBoardStore } from '@/stores/board'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 
-const taskStore = useTaskStore()
+const boardStore = useBoardStore()
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+const widthClass = computed(() => (route.meta.fullWidth ? 'max-w-none' : 'max-w-6xl'))
 const toast = useToast()
 const toastStore = useToastStore()
 
@@ -28,7 +30,7 @@ watch(
 
 function logout() {
   authStore.logout()
-  taskStore.logout()
+  boardStore.reset()
   router.push('/')
 }
 
@@ -53,7 +55,7 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen">
     <header class="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
-      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
+      <div class="mx-auto flex h-14 items-center justify-between gap-4 px-4" :class="widthClass">
         <RouterLink to="/tasks" class="flex items-center gap-2 font-semibold text-slate-900">
           <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white">
             <i class="pi pi-check-square" />
@@ -70,7 +72,7 @@ onMounted(async () => {
       </div>
     </header>
 
-    <main class="mx-auto max-w-6xl px-4 py-8">
+    <main class="mx-auto px-4 py-8" :class="widthClass">
       <RouterView />
     </main>
 

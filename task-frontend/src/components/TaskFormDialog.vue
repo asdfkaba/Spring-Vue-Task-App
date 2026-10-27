@@ -8,15 +8,19 @@ import SelectButton from 'primevue/selectbutton'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
-import { useTaskStore } from '@/stores/tasks'
+import { useBoardStore } from '@/stores/board'
 import { fromApi, toApi } from '@/utils/date'
-import { PRIORITY_OPTIONS, STATUS_OPTIONS } from '@/utils/task'
+import { PRIORITY_OPTIONS } from '@/utils/task'
 
 const visible = defineModel('visible', { type: Boolean, default: false })
-// null = create a new task, otherwise the task to edit
-const props = defineProps({ task: { type: Object, default: null } })
+const props = defineProps({
+  // null = create a new task, otherwise the task to edit
+  task: { type: Object, default: null },
+  // Column a new task is created in
+  columnId: { type: Number, default: null },
+})
 
-const store = useTaskStore()
+const store = useBoardStore()
 const toast = useToast()
 
 const isEdit = computed(() => props.task !== null)
@@ -28,7 +32,6 @@ const form = reactive({
   description: '',
   dueDate: null,
   priority: 2,
-  status: 'TODO',
 })
 
 const titleMissing = computed(() => submitted.value && !form.title.trim())
@@ -42,7 +45,6 @@ watch(visible, (open) => {
   form.description = t?.description ?? ''
   form.dueDate = fromApi(t?.due_date)
   form.priority = t?.priority ? Number(t.priority) : 2
-  form.status = t?.status ?? 'TODO'
 })
 
 // Without a previous value the picker takes the current time (e.g. 23:07).
@@ -65,7 +67,6 @@ async function save() {
     description: form.description.trim(),
     due_date: toApi(form.dueDate),
     priority: form.priority,
-    status: form.status,
   }
 
   busy.value = true
@@ -74,7 +75,7 @@ async function save() {
       await store.updateTask(props.task.id, data)
       toast.add({ severity: 'success', summary: 'Task updated', life: 2500 })
     } else {
-      await store.createTask(data)
+      await store.createTask(props.columnId, data)
       toast.add({ severity: 'success', summary: 'Task created', life: 2500 })
     }
     visible.value = false
@@ -147,31 +148,16 @@ async function save() {
         />
       </div>
 
-      <div class="flex flex-col gap-5">
-        <div class="flex flex-col gap-1.5">
-          <span class="text-sm font-medium text-slate-700">Priority</span>
-          <SelectButton
-            v-model="form.priority"
-            :options="PRIORITY_OPTIONS"
-            optionLabel="label"
-            optionValue="value"
-            :allowEmpty="false"
-            fluid
-          />
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <span class="text-sm font-medium text-slate-700">Status</span>
-          <SelectButton
-            v-model="form.status"
-            :options="STATUS_OPTIONS"
-            optionLabel="label"
-            optionValue="value"
-            :allowEmpty="false"
-            fluid
-            class="[&_.p-togglebutton]:px-2 [&_.p-togglebutton-label]:whitespace-nowrap"
-          />
-        </div>
+      <div class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium text-slate-700">Priority</span>
+        <SelectButton
+          v-model="form.priority"
+          :options="PRIORITY_OPTIONS"
+          optionLabel="label"
+          optionValue="value"
+          :allowEmpty="false"
+          fluid
+        />
       </div>
     </form>
 

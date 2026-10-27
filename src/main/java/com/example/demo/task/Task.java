@@ -1,5 +1,6 @@
 package com.example.demo.task;
 
+import com.example.demo.board.BoardColumn;
 import com.example.demo.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,7 +9,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name="task")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 public class Task {
     @Id
@@ -21,7 +23,6 @@ public class Task {
 
     String description;
     Integer priority;
-    String status = "TODO";
 
     public Task(String title, LocalDateTime due_date, LocalDateTime created, String description, Integer priority) {
         this.title = title;
@@ -35,6 +36,14 @@ public class Task {
     @JoinColumn(name="user_id")
     private User user;
 
+    // The column is the task's status on the board.
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name="board_column_id")
+    private BoardColumn boardColumn;
+
+    // Order of the task within its column, starting at 0.
+    @Column(nullable = false)
+    private int position;
 
     @PrePersist
     protected void onCreate() {
