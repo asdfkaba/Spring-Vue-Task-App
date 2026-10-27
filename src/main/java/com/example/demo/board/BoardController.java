@@ -4,6 +4,7 @@ import com.example.demo.board.BoardDtos.BoardDetail;
 import com.example.demo.board.BoardDtos.BoardSummary;
 import com.example.demo.board.BoardDtos.ColumnDto;
 import com.example.demo.board.BoardDtos.ColumnPatch;
+import com.example.demo.board.BoardDtos.NewBoardRequest;
 import com.example.demo.board.BoardDtos.NewColumnRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,18 @@ public class BoardController {
         return boardService.boardsOf(currentUserEmail()).stream()
                 .map(BoardSummary::from)
                 .toList();
+    }
+
+    @PostMapping("/boards")
+    @ResponseStatus(HttpStatus.CREATED)
+    public BoardSummary createBoard(@RequestBody NewBoardRequest request) {
+        return BoardSummary.from(boardService.createBoard(currentUserEmail(), request.name()));
+    }
+
+    @DeleteMapping("/boards/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteBoard(@PathVariable("id") int id) {
+        boardService.deleteBoard(id, currentUserEmail());
     }
 
     @GetMapping("/boards/{id}")

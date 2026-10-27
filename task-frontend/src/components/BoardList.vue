@@ -1,0 +1,47 @@
+<script setup>
+import Button from 'primevue/button'
+import { useBoardStore } from '@/stores/board'
+
+// List of the user's boards for the sidebar (desktop) and the drawer (mobile).
+// The parent owns the dialogs, so this only emits what the user wants to do.
+const emit = defineEmits(['create', 'delete', 'navigate'])
+
+const store = useBoardStore()
+</script>
+
+<template>
+  <nav class="flex min-h-0 flex-1 flex-col gap-1" aria-label="Boards">
+    <ul class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+      <li v-for="board in store.boards" :key="board.id" class="group relative">
+        <RouterLink
+          :to="{ name: 'board', params: { id: board.id } }"
+          class="flex items-center gap-2 rounded-lg py-2 pr-9 pl-3 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          active-class="bg-slate-100 font-semibold !text-slate-900"
+          @click="emit('navigate')"
+        >
+          <i class="pi pi-th-large text-xs text-slate-400" aria-hidden="true" />
+          <span class="truncate">{{ board.name }}</span>
+        </RouterLink>
+        <Button
+          icon="pi pi-trash"
+          text
+          rounded
+          severity="secondary"
+          size="small"
+          :aria-label="`Delete board ${board.name}`"
+          class="!absolute top-1/2 right-1 -translate-y-1/2 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+          @click="emit('delete', board)"
+        />
+      </li>
+    </ul>
+    <Button
+      label="New board"
+      icon="pi pi-plus"
+      text
+      severity="secondary"
+      size="small"
+      class="justify-start"
+      @click="emit('create')"
+    />
+  </nav>
+</template>

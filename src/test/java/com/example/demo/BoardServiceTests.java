@@ -37,6 +37,8 @@ class BoardServiceTests {
     @Autowired
     TaskRepository taskRepository;
     @Autowired
+    BoardRepository boardRepository;
+    @Autowired
     EntityManager em;
 
     Board board;
@@ -356,5 +358,59 @@ class BoardServiceTests {
         assertThat(detail.columns()).extracting(BoardDtos.ColumnDto::name)
                 .containsExactly("To do", "In progress", "Done");
         assertThat(detail.tasks()).extracting(t -> t.title()).containsExactly("A", "B", "D");
+    }
+
+    @Test
+    void createdBoardHasDefaultColumnsAndIsListedLast() {
+        Board second = boardService.createBoard(ALICE, "  Side project ");
+
+        assertThat(second.getName()).isEqualTo("Side project");
+        assertThat(columnRepository.findByBoardOrderByPosition(second))
+                .extracting(BoardColumn::getName)
+                .containsExactly("To do", "In progress", "Done");
+        assertThat(boardService.boardsOf(ALICE))
+                .extracting(Board::getName)
+                .containsExactly("My board", "Side project");
+    }
+
+    @Test
+    void boardNameMustNotBeBlank() {
+        assertThatThrownBy(() -> boardService.createBoard(ALICE, " "))
+                .satisfies(e -> assertStatus(e, HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void deleteBoardRemovesItsColumnsAndTasksOnly() {
+        Board other = boardService.createBoard(ALICE, "Other");
+        BoardColumn otherColumn = columnRepository.findByBoardOrderByPosition(other).get(0);
+        Task kept = addTask("Kept", otherColumn);
+        Task gone = addTask("Gone", todo);
+        addTask("Gone too", done);
+
+        boardService.deleteBoard(board.getId(), ALICE);
+        em.flush();
+        em.clear();
+
+        assertThat(boardRepository.findById(board.getId())).isEmpty();
+        assertThat(columnRepository.findById(todo.getId())).isEmpty();
+        assertThat(taskRepository.findById(gone.getId())).isEmpty();
+        assertThat(taskRepository.findById(kept.getId())).isPresent();
+        assertThat(boardService.boardsOf(ALICE)).extracting(Board::getName).containsExactly("Other");
+    }
+
+    @Test
+    void lastBoardCanBeDeleted() {
+        boardService.deleteBoard(board.getId(), ALICE);
+
+        assertThat(boardService.boardsOf(ALICE)).isEmpty();
+    }
+
+    @Test
+    void cannotDeleteBoardOfOtherUser() {
+        userRepository.save(new User("Bob", BOB, null));
+
+        assertThatThrownBy(() -> boardService.deleteBoard(board.getId(), BOB))
+                .satisfies(e -> assertStatus(e, HttpStatus.NOT_FOUND));
+        assertThat(boardRepository.findById(board.getId())).isPresent();
     }
 }

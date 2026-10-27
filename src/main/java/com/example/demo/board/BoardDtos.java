@@ -26,6 +26,10 @@ public final class BoardDtos {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    public record NewBoardRequest(String name) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record NewColumnRequest(String name, String color) {
     }
 

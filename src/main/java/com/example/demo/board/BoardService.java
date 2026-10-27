@@ -7,6 +7,7 @@ import com.example.demo.task.Task;
 import com.example.demo.task.TaskDto;
 import com.example.demo.task.TaskRepository;
 import com.example.demo.user.User;
+import com.example.demo.user.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,23 +33,46 @@ public class BoardService {
             new DefaultColumn("To do", "#64748b"),
             new DefaultColumn("In progress", "#3b82f6"),
             new DefaultColumn("Done", "#22c55e"));
-    static final int MAX_COLUMN_NAME_LENGTH = 50;
+    static final int MAX_NAME_LENGTH = 50;
     private static final Pattern HEX_COLOR = Pattern.compile("#[0-9a-fA-F]{6}");
 
     private final BoardRepository boardRepository;
     private final BoardColumnRepository columnRepository;
     private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
 
     public BoardService(BoardRepository boardRepository, BoardColumnRepository columnRepository,
-                        TaskRepository taskRepository) {
+                        TaskRepository taskRepository, UserRepository userRepository) {
         this.boardRepository = boardRepository;
         this.columnRepository = columnRepository;
         this.taskRepository = taskRepository;
+        this.userRepository = userRepository;
+    }
+
+    // The board every new user starts with.
+    @Transactional
+    public Board createDefaultBoard(User user) {
+        return createBoardWithDefaultColumns(user, DEFAULT_BOARD_NAME);
     }
 
     @Transactional
-    public Board createDefaultBoard(User user) {
-        Board board = boardRepository.save(new Board(DEFAULT_BOARD_NAME, user));
+    public Board createBoard(String email, String name) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        return createBoardWithDefaultColumns(user, validName(name, "Board"));
+    }
+
+    /** Deletes the board with all its columns and tasks. A user may delete their last board. */
+    @Transactional
+    public void deleteBoard(int boardId, String email) {
+        Board board = findOwnBoard(boardId, email);
+        taskRepository.deleteAll(taskRepository.findByBoardInOrder(board));
+        columnRepository.deleteAll(columnRepository.findByBoardOrderByPosition(board));
+        boardRepository.delete(board);
+    }
+
+    private Board createBoardWithDefaultColumns(User user, String name) {
+        Board board = boardRepository.save(new Board(name, user));
         for (int i = 0; i < DEFAULT_COLUMNS.size(); i++) {
             DefaultColumn template = DEFAULT_COLUMNS.get(i);
             columnRepository.save(new BoardColumn(template.name(), template.color(), i, board));
@@ -77,7 +101,7 @@ public class BoardService {
     public BoardColumn addColumn(int boardId, String email, String name, String color) {
         Board board = findOwnBoard(boardId, email);
         int position = columnRepository.findByBoardOrderByPosition(board).size();
-        return columnRepository.save(new BoardColumn(validColumnName(name), validColor(color), position, board));
+        return columnRepository.save(new BoardColumn(validName(name, "Column"), validColor(color), position, board));
     }
 
     /**
@@ -88,7 +112,7 @@ public class BoardService {
     public BoardColumn updateColumn(int columnId, String email, ColumnPatch patch) {
         BoardColumn column = findOwnColumn(columnId, email);
         if (patch.name() != null) {
-            column.setName(validColumnName(patch.name()));
+            column.setName(validName(patch.name(), "Column"));
         }
         if (patch.colorSet()) {
             column.setColor(validColor(patch.color()));
@@ -216,14 +240,15 @@ public class BoardService {
         return color.toLowerCase();
     }
 
-    private static String validColumnName(String name) {
+    // Board and column names: trimmed, 1 to MAX_NAME_LENGTH characters.
+    private static String validName(String name, String what) {
         String trimmed = name == null ? "" : name.trim();
         if (trimmed.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Column name must not be empty");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, what + " name must not be empty");
         }
-        if (trimmed.length() > MAX_COLUMN_NAME_LENGTH) {
+        if (trimmed.length() > MAX_NAME_LENGTH) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Column name must be at most " + MAX_COLUMN_NAME_LENGTH + " characters");
+                    what + " name must be at most " + MAX_NAME_LENGTH + " characters");
         }
         return trimmed;
     }

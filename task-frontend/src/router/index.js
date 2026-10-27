@@ -10,19 +10,22 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
-      path: '/tasks',
-      name: 'tasks',
+      // Without an id the view opens the last used (or first) board.
+      path: '/boards/:id?',
+      name: 'board',
       component: () => import('../views/BoardView.vue'),
-      // The board scrolls sideways, so it uses the full window width.
+      // Sidebar and board use the full window width.
       meta: { requiresAuth: true, fullWidth: true },
     },
+    // Old URL of the task list.
+    { path: '/tasks', redirect: '/boards' },
     {
       path: '/oauth2/callback',
       component: () => import('@/auth/OAuthCallback.vue'),
       meta: { requiresAuth: false },
     },
-    // Old create/edit/detail pages are now dialogs on the board at /tasks.
-    { path: '/:pathMatch(.*)*', redirect: '/tasks' },
+    // Old create/edit/detail pages are now dialogs on the board.
+    { path: '/:pathMatch(.*)*', redirect: '/boards' },
   ],
 })
 
