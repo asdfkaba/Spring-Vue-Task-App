@@ -18,6 +18,13 @@ const router = createRouter({
       // Sidebar and board use the full window width.
       meta: { requiresAuth: true, fullWidth: true },
     },
+    {
+      // Read-only view of a board through its share link, no login needed.
+      path: '/share/:token',
+      name: 'shared-board',
+      component: () => import('../views/SharedBoardView.vue'),
+      meta: { requiresAuth: false, fullWidth: true },
+    },
     // Old URL of the task list.
     { path: '/tasks', redirect: '/boards' },
     {

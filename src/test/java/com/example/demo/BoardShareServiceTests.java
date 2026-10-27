@@ -1,0 +1,129 @@
+package com.example.demo;
+
+import com.example.demo.board.*;
+import com.example.demo.task.Task;
+import com.example.demo.task.TaskRepository;
+import com.example.demo.user.User;
+import com.example.demo.user.UserRepository;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@DataJpaTest
+@Import({BoardService.class, BoardShareService.class})
+class BoardShareServiceTests {
+
+    static final String ALICE = "alice@example.com";
+    static final String BOB = "bob@example.com";
+
+    @Autowired BoardService boardService;
+    @Autowired BoardShareService shareService;
+    @Autowired UserRepository userRepository;
+    @Autowired BoardColumnRepository columnRepository;
+    @Autowired BoardShareRepository shareRepository;
+    @Autowired TaskRepository taskRepository;
+    @Autowired EntityManager em;
+
+    Board board;
+
+    @BeforeEach
+    void setUp() {
+        User alice = userRepository.save(new User("Alice", ALICE, null));
+        userRepository.save(new User("Bob", BOB, null));
+        board = boardService.createDefaultBoard(alice);
+
+        BoardColumn todo = columnRepository.findByBoardOrderByPosition(board).get(0);
+        Task task = new Task();
+        task.setTitle("Shared task");
+        task.setUser(alice);
+        task.setBoardColumn(todo);
+        taskRepository.save(task);
+    }
+
+    private static void assertNotFound(Throwable e) {
+        assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    private String refresh(String token) {
+        em.flush();
+        em.clear();
+        return token;
+    }
+
+    @Test
+    void boardIsNotSharedByDefault() {
+        assertThat(shareService.getShare(board.getId(), ALICE)).isEmpty();
+    }
+
+    @Test
+    void sharedBoardShowsColumnsAndTasks() {
+        String token = refresh(shareService.createShare(board.getId(), ALICE).getToken().toString());
+
+        BoardDtos.SharedBoard shared = shareService.sharedBoard(token);
+
+        assertThat(shared.name()).isEqualTo("My board");
+        assertThat(shared.columns()).extracting(BoardDtos.ColumnDto::name)
+                .containsExactly("To do", "In progress", "Done");
+        assertThat(shared.tasks()).extracting(t -> t.title()).containsExactly("Shared task");
+        assertThat(shareService.getShare(board.getId(), ALICE)).isPresent();
+    }
+
+    @Test
+    void creatingAgainReplacesTheLink() {
+        String old = refresh(shareService.createShare(board.getId(), ALICE).getToken().toString());
+        String renewed = refresh(shareService.createShare(board.getId(), ALICE).getToken().toString());
+
+        assertThat(renewed).isNotEqualTo(old);
+        assertThatThrownBy(() -> shareService.sharedBoard(old)).satisfies(BoardShareServiceTests::assertNotFound);
+        assertThat(shareService.sharedBoard(renewed).name()).isEqualTo("My board");
+        assertThat(shareRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void revokedLinkStopsWorking() {
+        String token = refresh(shareService.createShare(board.getId(), ALICE).getToken().toString());
+
+        shareService.revokeShare(board.getId(), ALICE);
+        refresh(token);
+
+        assertThatThrownBy(() -> shareService.sharedBoard(token)).satisfies(BoardShareServiceTests::assertNotFound);
+        assertThat(shareService.getShare(board.getId(), ALICE)).isEmpty();
+    }
+
+    @Test
+    void unknownOrMalformedTokensAreNotFound() {
+        assertThatThrownBy(() -> shareService.sharedBoard("00000000-0000-0000-0000-000000000000"))
+                .satisfies(BoardShareServiceTests::assertNotFound);
+        assertThatThrownBy(() -> shareService.sharedBoard("not-a-uuid"))
+                .satisfies(BoardShareServiceTests::assertNotFound);
+    }
+
+    @Test
+    void onlyTheOwnerManagesTheLink() {
+        shareService.createShare(board.getId(), ALICE);
+
+        assertThatThrownBy(() -> shareService.getShare(board.getId(), BOB)).satisfies(BoardShareServiceTests::assertNotFound);
+        assertThatThrownBy(() -> shareService.createShare(board.getId(), BOB)).satisfies(BoardShareServiceTests::assertNotFound);
+        assertThatThrownBy(() -> shareService.revokeShare(board.getId(), BOB)).satisfies(BoardShareServiceTests::assertNotFound);
+        assertThat(shareRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void deletingASharedBoardRemovesTheLink() {
+        String token = refresh(shareService.createShare(board.getId(), ALICE).getToken().toString());
+
+        boardService.deleteBoard(board.getId(), ALICE);
+        em.flush();
+
+        assertThat(shareRepository.count()).isZero();
+        assertThatThrownBy(() -> shareService.sharedBoard(token)).satisfies(BoardShareServiceTests::assertNotFound);
+    }
+}

@@ -96,6 +96,27 @@ export const useBoardStore = defineStore('board', {
       if (this.board?.id === id) this.closeBoard()
     },
 
+    // ---- Share link (one read-only link per board) ----
+
+    // The board's link as { token, created }, or null if it isn't shared.
+    async fetchShare(boardId) {
+      const response = await expectOk(await authFetch(`/api/boards/${boardId}/share`), 'Loading share link')
+      return response.status === 204 ? null : response.json()
+    },
+
+    // Creates the link, or replaces it so the old one stops working.
+    async createShare(boardId) {
+      const response = await expectOk(
+        await authFetch(`/api/boards/${boardId}/share`, { method: 'POST' }),
+        'Creating share link',
+      )
+      return response.json()
+    },
+
+    async revokeShare(boardId) {
+      await expectOk(await authFetch(`/api/boards/${boardId}/share`, { method: 'DELETE' }), 'Stopping sharing')
+    },
+
     // ---- Tasks ----
 
     findTask(id) {

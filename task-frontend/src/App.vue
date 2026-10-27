@@ -44,7 +44,8 @@ onMounted(async () => {
   if (result.status === 'ok') {
     if (route.path === '/') router.push('/boards')
   } else if (result.status === 'unauthenticated') {
-    router.push('/')
+    // Pages like a shared board work without login.
+    if (route.meta.requiresAuth) router.push('/')
   } else if (result.status === 'backend-unreachable') {
     toast.add({ severity: 'warn', summary: 'Offline', detail: 'Backend not reachable' })
   } else if (result.status === 'error') {

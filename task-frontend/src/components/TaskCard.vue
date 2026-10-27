@@ -9,6 +9,8 @@ const props = defineProps({
   task: { type: Object, required: true },
   // Color of the column the task is in; the card shows it as a stripe.
   color: { type: String, default: null },
+  // Shared boards: no editing, no menu, and the full description.
+  readonly: { type: Boolean, default: false },
 })
 const emit = defineEmits(['edit', 'menu'])
 
@@ -19,11 +21,12 @@ const isOverdue = computed(() => due.value !== null && due.value < new Date())
 
 <template>
   <article
-    class="group relative flex cursor-grab flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md active:cursor-grabbing"
-    tabindex="0"
+    class="group relative flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+    :class="readonly ? '' : 'cursor-grab transition hover:border-slate-300 hover:shadow-md active:cursor-grabbing'"
+    :tabindex="readonly ? undefined : 0"
     :data-task-id="task.id"
-    @click="emit('edit', task)"
-    @keydown.enter="emit('edit', task)"
+    @click="!readonly && emit('edit', task)"
+    @keydown.enter="!readonly && emit('edit', task)"
   >
     <div class="absolute inset-y-0 left-0 w-1.5" :style="{ backgroundColor: color ?? DEFAULT_COLUMN_COLOR }" />
 
@@ -33,6 +36,7 @@ const isOverdue = computed(() => due.value !== null && due.value < new Date())
           {{ task.title }}
         </h3>
         <Button
+          v-if="!readonly"
           icon="pi pi-ellipsis-v"
           text
           rounded
@@ -44,7 +48,11 @@ const isOverdue = computed(() => due.value !== null && due.value < new Date())
         />
       </header>
 
-      <p v-if="task.description" class="line-clamp-3 text-sm whitespace-pre-line text-slate-600">
+      <p
+        v-if="task.description"
+        class="text-sm whitespace-pre-line text-slate-600"
+        :class="{ 'line-clamp-3': !readonly }"
+      >
         {{ task.description }}
       </p>
 
