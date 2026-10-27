@@ -11,12 +11,16 @@ const props = defineProps({
   color: { type: String, default: null },
   // Shared boards: no editing, no menu, and the full description.
   readonly: { type: Boolean, default: false },
+  // Neighbour columns ({ id, name }) for the move arrows, an alternative to drag & drop.
+  leftColumn: { type: Object, default: null },
+  rightColumn: { type: Object, default: null },
 })
-const emit = defineEmits(['edit', 'menu'])
+const emit = defineEmits(['edit', 'menu', 'move'])
 
 const priority = computed(() => priorityOf(props.task.priority))
 const due = computed(() => fromApi(props.task.due_date))
 const isOverdue = computed(() => due.value !== null && due.value < new Date())
+const showArrows = computed(() => !props.readonly && (props.leftColumn || props.rightColumn))
 </script>
 
 <template>
@@ -56,7 +60,7 @@ const isOverdue = computed(() => due.value !== null && due.value < new Date())
         {{ task.description }}
       </p>
 
-      <div v-if="priority || due" class="flex flex-wrap items-center gap-2 text-xs">
+      <div v-if="priority || due || showArrows" class="flex flex-wrap items-center gap-2 text-xs">
         <Tag v-if="priority" :value="priority.label" :severity="priority.severity" class="!text-xs" />
         <span
           v-if="due"
@@ -66,6 +70,34 @@ const isOverdue = computed(() => due.value !== null && due.value < new Date())
           <i class="pi text-xs" :class="isOverdue ? 'pi-exclamation-circle' : 'pi-calendar'" />
           {{ formatDue(due) }}
         </span>
+        <!-- With a mouse the arrows show on hover or keyboard focus; on touch screens always. -->
+        <div
+          v-if="showArrows"
+          class="-my-1 ml-auto flex transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
+        >
+          <Button
+            v-if="leftColumn"
+            icon="pi pi-chevron-left"
+            text
+            rounded
+            severity="secondary"
+            size="small"
+            :aria-label="`Move to ${leftColumn.name}`"
+            :title="`Move to ${leftColumn.name}`"
+            @click.stop="emit('move', task, leftColumn.id)"
+          />
+          <Button
+            v-if="rightColumn"
+            icon="pi pi-chevron-right"
+            text
+            rounded
+            severity="secondary"
+            size="small"
+            :aria-label="`Move to ${rightColumn.name}`"
+            :title="`Move to ${rightColumn.name}`"
+            @click.stop="emit('move', task, rightColumn.id)"
+          />
+        </div>
       </div>
     </div>
   </article>
