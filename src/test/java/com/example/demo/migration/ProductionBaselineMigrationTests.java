@@ -49,6 +49,24 @@ class ProductionBaselineMigrationTests {
     }
 
     @Test
+    void laterMigrationsRunAfterTheBaseline() {
+        assertThat(jdbc.queryForList(
+                "select version from flyway_schema_history where type = 'SQL' and success order by installed_rank",
+                String.class)).contains("2");
+    }
+
+    @Test
+    void unusedColumnsAreGone() {
+        assertThat(columnsOf("task")).doesNotContain("priority", "status").contains("title", "description");
+        assertThat(columnsOf("refresh_token")).doesNotContain("expiry_date", "user_email").contains("expires_at");
+    }
+
+    private java.util.List<String> columnsOf(String table) {
+        return jdbc.queryForList(
+                "select column_name from information_schema.columns where table_name = ?", String.class, table);
+    }
+
+    @Test
     void existingDataIsKept() {
         assertThat(jdbc.queryForObject("select title from task", String.class)).isEqualTo("Old task");
         assertThat(jdbc.queryForObject("select slug from board", String.class)).isEqualTo("bewerbungen");

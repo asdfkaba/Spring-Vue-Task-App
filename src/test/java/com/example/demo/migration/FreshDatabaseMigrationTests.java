@@ -45,7 +45,7 @@ class FreshDatabaseMigrationTests {
     void allMigrationsRunFromScratch() {
         List<String> applied = jdbc.queryForList(
                 "select version from flyway_schema_history where success order by installed_rank", String.class);
-        assertThat(applied).first().isEqualTo("1");
+        assertThat(applied).startsWith("1", "2");
         assertThat(jdbc.queryForObject(
                 "select count(*) from flyway_schema_history where type = 'BASELINE'", Integer.class)).isZero();
     }
