@@ -3,7 +3,12 @@ on:
   push:
     branches: [ main ]
 jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
   build-and-deploy:
+    # Only deploy what passed the backend and browser tests.
+    needs: tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +36,7 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      # The tests ran in the "tests" job above.
       - name: Build with Maven
         run: ./mvnw clean package -DskipTests
 
