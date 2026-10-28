@@ -1,9 +1,12 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import TaskCard from '@/components/TaskCard.vue'
+import TaskDetails from '@/components/TaskDetails.vue'
 
 // Read-only board behind a share link. Works without login, so it uses plain fetch.
 const route = useRoute()
@@ -40,6 +43,16 @@ async function load(token) {
 }
 
 const labelsOf = (task) => (board.value?.labels ?? []).filter((l) => task.labelIds?.includes(l.id))
+
+// The task shown in the dialog; read-only, so there is no edit mode.
+const openTask = ref(null)
+const detailsVisible = ref(false)
+const openColumn = computed(() => board.value?.columns.find((c) => c.id === openTask.value?.columnId) ?? null)
+
+function showTask(task) {
+  openTask.value = task
+  detailsVisible.value = true
+}
 
 // Correcting the address (see load) must not load the board again.
 watch(
@@ -100,11 +113,26 @@ watch(
                 :color="column.color"
                 :labels="labelsOf(task)"
                 readonly
+                @open="showTask"
               />
             </div>
           </div>
         </div>
       </div>
     </template>
+
+    <Dialog
+      v-model:visible="detailsVisible"
+      modal
+      header="Task"
+      :style="{ width: '40rem' }"
+      :breakpoints="{ '640px': '95vw' }"
+      :draggable="false"
+    >
+      <TaskDetails v-if="openTask" :task="openTask" :column="openColumn" :labels="labelsOf(openTask)" />
+      <template #footer>
+        <Button label="Close" severity="secondary" text @click="detailsVisible = false" />
+      </template>
+    </Dialog>
   </section>
 </template>
