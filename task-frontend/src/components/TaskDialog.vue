@@ -14,6 +14,8 @@ import { useBoardStore } from '@/stores/board'
 import { formatDue, formatShort, fromApi, toApi } from '@/utils/date'
 import { DEFAULT_COLUMN_COLOR, PRIORITY_OPTIONS, priorityOf } from '@/utils/task'
 import { renderMarkdown } from '@/utils/markdown'
+import LabelPicker from '@/components/LabelPicker.vue'
+import LabelPill from '@/components/LabelPill.vue'
 
 // Shows a task (view) and edits or creates it (edit) in one dialog.
 
@@ -48,10 +50,13 @@ const isOverdue = computed(() => due.value !== null && due.value < new Date())
 const created = computed(() => fromApi(current.value?.created))
 const edited = computed(() => fromApi(current.value?.edited))
 const descriptionHtml = computed(() => renderMarkdown(current.value?.description))
+const labels = computed(() => (current.value ? store.labelsOf(current.value) : []))
 
 const busy = ref(false)
 const submitted = ref(false)
-const form = reactive({ title: '', description: '', dueDate: null, priority: 2 })
+const form = reactive({ title: '', description: '', dueDate: null, priority: 2, labelIds: [] })
+const labelPickerOpen = ref(false)
+const formLabels = computed(() => store.labels.filter((l) => form.labelIds.includes(l.id)))
 let initialForm = ''
 const isDirty = computed(() => JSON.stringify(form) !== initialForm)
 const titleMissing = computed(() => submitted.value && !form.title.trim())
@@ -72,6 +77,8 @@ function fillForm() {
   form.description = t?.description ?? ''
   form.dueDate = fromApi(t?.due_date)
   form.priority = t?.priority ? Number(t.priority) : 2
+  form.labelIds = [...(t?.labelIds ?? [])].sort((a, b) => a - b)
+  labelPickerOpen.value = false
   initialForm = JSON.stringify(form)
 }
 
@@ -136,6 +143,7 @@ async function save() {
     description: form.description.trim(),
     due_date: toApi(form.dueDate),
     priority: form.priority,
+    labelIds: form.labelIds,
   }
 
   busy.value = true
@@ -217,6 +225,9 @@ async function save() {
           :severity="priority.severity"
           :class="{ 'dark:bg-slate-700': priority.severity === 'secondary' }"
         />
+        <span v-if="labels.length" class="flex flex-wrap gap-1" aria-label="Labels">
+          <LabelPill v-for="label in labels" :key="label.id" :label="label" />
+        </span>
         <span
           v-if="due"
           class="flex items-center gap-1.5 font-medium"
@@ -307,6 +318,28 @@ async function save() {
         <p class="text-xs text-slate-400 dark:text-slate-500">
           Markdown supported: **bold**, *italic*, [links](https://…), lists, - [ ] checkboxes, `code`
         </p>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center justify-between gap-2">
+          <span id="task-labels" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Labels <span class="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+          </span>
+          <Button
+            :label="labelPickerOpen ? 'Done' : 'Edit labels'"
+            :icon="labelPickerOpen ? 'pi pi-check' : 'pi pi-tag'"
+            text
+            size="small"
+            severity="secondary"
+            :aria-expanded="labelPickerOpen"
+            @click="labelPickerOpen = !labelPickerOpen"
+          />
+        </div>
+        <div v-if="!labelPickerOpen" class="flex min-h-6 flex-wrap gap-1" aria-labelledby="task-labels">
+          <LabelPill v-for="label in formLabels" :key="label.id" :label="label" />
+          <span v-if="!formLabels.length" class="text-sm text-slate-400 dark:text-slate-500">No labels</span>
+        </div>
+        <LabelPicker v-else v-model="form.labelIds" />
       </div>
 
       <div class="flex flex-col gap-1.5">

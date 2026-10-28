@@ -3,6 +3,7 @@ package com.example.demo.board;
 import com.example.demo.board.BoardDtos.BoardDetail;
 import com.example.demo.board.BoardDtos.ColumnDto;
 import com.example.demo.board.BoardDtos.ColumnPatch;
+import com.example.demo.board.BoardDtos.LabelDto;
 import com.example.demo.task.Task;
 import com.example.demo.task.TaskDto;
 import com.example.demo.task.TaskRepository;
@@ -34,22 +35,24 @@ public class BoardService {
             new DefaultColumn("In progress", "#3b82f6"),
             new DefaultColumn("Done", "#22c55e"));
     static final int MAX_NAME_LENGTH = 50;
-    private static final Pattern HEX_COLOR = Pattern.compile("#[0-9a-fA-F]{6}");
+    static final Pattern HEX_COLOR = Pattern.compile("#[0-9a-fA-F]{6}");
 
     private final BoardRepository boardRepository;
     private final BoardColumnRepository columnRepository;
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final BoardShareRepository shareRepository;
+    private final BoardLabelRepository labelRepository;
 
     public BoardService(BoardRepository boardRepository, BoardColumnRepository columnRepository,
                         TaskRepository taskRepository, UserRepository userRepository,
-                        BoardShareRepository shareRepository) {
+                        BoardShareRepository shareRepository, BoardLabelRepository labelRepository) {
         this.boardRepository = boardRepository;
         this.columnRepository = columnRepository;
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
         this.shareRepository = shareRepository;
+        this.labelRepository = labelRepository;
     }
 
     // The board every new user starts with.
@@ -65,12 +68,14 @@ public class BoardService {
         return createBoardWithDefaultColumns(user, validName(name, "Board"));
     }
 
-    /** Deletes the board with all its columns and tasks. A user may delete their last board. */
+    /** Deletes the board with all its columns, tasks and labels. A user may delete their last board. */
     @Transactional
     public void deleteBoard(int boardId, String email) {
         Board board = findOwnBoard(boardId, email);
         shareRepository.deleteByBoard(board);
+        // Deleting the tasks also clears their rows in task_label.
         taskRepository.deleteAll(taskRepository.findByBoardInOrder(board));
+        labelRepository.deleteAll(labelRepository.findByBoardOrderById(board));
         columnRepository.deleteAll(columnRepository.findByBoardOrderByPosition(board));
         boardRepository.delete(board);
     }
@@ -114,13 +119,18 @@ public class BoardService {
     @Transactional(readOnly = true)
     public BoardDetail getBoard(int boardId, String email) {
         Board board = findOwnBoard(boardId, email);
-        return new BoardDetail(board.getId(), board.getName(), board.getSlug(), columnsOf(board), tasksOf(board));
+        return new BoardDetail(board.getId(), board.getName(), board.getSlug(), columnsOf(board), labelsOf(board),
+                tasksOf(board));
     }
 
     List<ColumnDto> columnsOf(Board board) {
         return columnRepository.findByBoardOrderByPosition(board).stream()
                 .map(ColumnDto::from)
                 .toList();
+    }
+
+    List<LabelDto> labelsOf(Board board) {
+        return labelRepository.findByBoardOrderById(board).stream().map(LabelDto::from).toList();
     }
 
     // Sorted by column position, then by position within the column.

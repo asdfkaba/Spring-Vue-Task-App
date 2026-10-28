@@ -575,6 +575,7 @@ function askDeleteColumn(column) {
                     :key="task.id"
                     :task="task"
                     :color="column.color"
+                    :labels="store.labelsOf(task)"
                     :leftColumn="neighbours(index).left"
                     :rightColumn="neighbours(index).right"
                     @open="openTask"

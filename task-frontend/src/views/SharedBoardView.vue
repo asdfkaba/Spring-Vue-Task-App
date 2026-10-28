@@ -8,7 +8,7 @@ import TaskCard from '@/components/TaskCard.vue'
 // Read-only board behind a share link. Works without login, so it uses plain fetch.
 const route = useRoute()
 
-const board = ref(null) // { name, columns, tasks }
+const board = ref(null) // { name, columns, labels, tasks }
 const status = ref('loading') // 'loading' | 'ok' | 'not-found' | 'error'
 
 const tasksByColumn = computed(() => {
@@ -33,6 +33,8 @@ async function load(token) {
     status.value = 'error'
   }
 }
+
+const labelsOf = (task) => (board.value?.labels ?? []).filter((l) => task.labelIds?.includes(l.id))
 
 watch(() => route.params.token, load, { immediate: true })
 </script>
@@ -84,6 +86,7 @@ watch(() => route.params.token, load, { immediate: true })
                 :key="task.id"
                 :task="task"
                 :color="column.color"
+                :labels="labelsOf(task)"
                 readonly
               />
             </div>

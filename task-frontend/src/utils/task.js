@@ -23,3 +23,24 @@ export const COLUMN_COLOR_PRESETS = [
   '#8b5cf6',
   '#ec4899',
 ]
+
+// Text on a label pill: white or dark slate, whichever has more contrast to the color (WCAG).
+const DARK_TEXT = '#0f172a'
+
+function relativeLuminance(hex) {
+  const n = parseInt(hex.slice(1), 16)
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const c = v / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+export function contrastRatio(a, b) {
+  const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+export function labelTextColor(hex) {
+  return contrastRatio(hex, '#ffffff') >= contrastRatio(hex, DARK_TEXT) ? '#ffffff' : DARK_TEXT
+}

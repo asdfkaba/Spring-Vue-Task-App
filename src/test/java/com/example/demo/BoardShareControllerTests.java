@@ -50,7 +50,7 @@ class BoardShareControllerTests {
 
     @Test
     void sharedBoardIsReadableWithoutLogin() throws Exception {
-        when(shareService.sharedBoard("abc")).thenReturn(new SharedBoard("My board", List.of(), List.of()));
+        when(shareService.sharedBoard("abc")).thenReturn(new SharedBoard("My board", List.of(), List.of(), List.of()));
 
         mockMvc.perform(get("/share/abc"))
                 .andExpect(status().isOk())
