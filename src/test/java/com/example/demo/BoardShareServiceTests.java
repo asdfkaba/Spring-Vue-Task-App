@@ -6,6 +6,7 @@ import com.example.demo.task.TaskRepository;
 import com.example.demo.user.User;
 import com.example.demo.user.UserRepository;
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -125,5 +126,40 @@ class BoardShareServiceTests {
 
         assertThat(shareRepository.count()).isZero();
         assertThatThrownBy(() -> shareService.sharedBoard(token)).satisfies(BoardShareServiceTests::assertNotFound);
+    }
+
+    @Test
+    void readableLinkWorksAndReportsItsCurrentForm() {
+        BoardShare share = shareService.createShare(board.getId(), ALICE);
+        String path = ShareLinks.path("my-board", share.getToken());
+        refresh(path);
+
+        BoardDtos.SharedBoard shared = shareService.sharedBoard(path);
+        assertThat(shared.name()).isEqualTo("My board");
+        assertThat(shared.path()).isEqualTo(path).matches("my-board-[A-Za-z0-9_-]{22}");
+        // Old links (plain token) show the same board and learn the new form.
+        assertThat(shareService.sharedBoard(share.getToken().toString()).path()).isEqualTo(path);
+    }
+
+    @Test
+    void outdatedSlugStillWorks() {
+        BoardShare share = shareService.createShare(board.getId(), ALICE);
+        String key = ShareLinks.path("x", share.getToken()).substring(2);
+        refresh(key);
+
+        assertThat(shareService.sharedBoard("old-name-" + key).path()).isEqualTo("my-board-" + key);
+        assertThat(shareService.sharedBoard(key).name()).isEqualTo("My board");
+    }
+
+    @Test
+    void wrongKeysAreNotFound() {
+        BoardShare share = shareService.createShare(board.getId(), ALICE);
+        String path = ShareLinks.path("my-board", share.getToken());
+        refresh(path);
+        String lastCharChanged = path.substring(0, path.length() - 1) + (path.endsWith("A") ? "B" : "A");
+
+        for (String bad : List.of(lastCharChanged, "my-board-" + "A".repeat(21), "my-board", "", "my-board-!!!!!!!!!!!!!!!!!!!!!!")) {
+            assertThatThrownBy(() -> shareService.sharedBoard(bad)).satisfies(BoardShareServiceTests::assertNotFound);
+        }
     }
 }

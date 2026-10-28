@@ -37,9 +37,10 @@ public class BoardShareController {
     }
 
     // Public: no login needed (see WebSecurityConfig).
-    @GetMapping("/share/{token}")
-    public SharedBoard getSharedBoard(@PathVariable("token") String token) {
-        return shareService.sharedBoard(token);
+    // path: "<slug>-<key>" or, for older links, the plain token (see ShareLinks).
+    @GetMapping("/share/{path}")
+    public SharedBoard getSharedBoard(@PathVariable("path") String path) {
+        return shareService.sharedBoard(path);
     }
 
     private static String currentUserEmail() {

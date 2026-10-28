@@ -4,6 +4,7 @@ import com.example.demo.auth.jwt.TokenService;
 import com.example.demo.board.Board;
 import com.example.demo.board.BoardDtos.SharedBoard;
 import com.example.demo.board.BoardShare;
+import com.example.demo.board.ShareLinks;
 import com.example.demo.board.BoardShareController;
 import com.example.demo.board.BoardShareService;
 import com.example.demo.config.WebSecurityConfig;
@@ -50,7 +51,7 @@ class BoardShareControllerTests {
 
     @Test
     void sharedBoardIsReadableWithoutLogin() throws Exception {
-        when(shareService.sharedBoard("abc")).thenReturn(new SharedBoard("My board", List.of(), List.of(), List.of()));
+        when(shareService.sharedBoard("abc")).thenReturn(new SharedBoard("My board", "my-board-abc", List.of(), List.of(), List.of()));
 
         mockMvc.perform(get("/share/abc"))
                 .andExpect(status().isOk())
@@ -83,12 +84,16 @@ class BoardShareControllerTests {
 
     @Test
     @WithMockUser(username = ALICE)
-    void createReturnsToken() throws Exception {
-        BoardShare share = new BoardShare(new Board());
+    void createReturnsLinkPathWithSlugAndKey() throws Exception {
+        Board board = new Board();
+        board.setSlug("bewerbungen");
+        BoardShare share = new BoardShare(board);
         when(shareService.createShare(1, ALICE)).thenReturn(share);
 
         mockMvc.perform(post("/boards/1/share"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.token").value(share.getToken().toString()));
+                .andExpect(jsonPath("$.path").value(ShareLinks.path("bewerbungen", share.getToken())))
+                .andExpect(jsonPath("$.path").value(org.hamcrest.Matchers.matchesPattern("bewerbungen-[A-Za-z0-9_-]{22}")))
+                .andExpect(jsonPath("$.token").doesNotExist());
     }
 }
