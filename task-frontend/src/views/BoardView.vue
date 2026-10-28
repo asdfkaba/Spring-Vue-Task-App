@@ -292,6 +292,12 @@ function openAddColumn() {
   columnDialogVisible.value = true
 }
 
+// New columns are added at the end, which can be off screen.
+async function showNewColumn(column) {
+  await nextTick()
+  scrollToColumn(column.id)
+}
+
 function openEditColumn(column) {
   editingColumn.value = column
   columnDialogVisible.value = true
@@ -437,6 +443,15 @@ function askDeleteColumn(column) {
             outlined
             @click="shareDialogVisible = true"
           />
+          <!-- Small screens have the + in the column tabs instead. -->
+          <Button
+            v-if="!isMobile"
+            label="Add column"
+            icon="pi pi-objects-column"
+            severity="secondary"
+            outlined
+            @click="openAddColumn"
+          />
           <Button
             v-if="store.columns.length"
             :label="isMobile ? undefined : 'New task'"
@@ -503,7 +518,8 @@ function askDeleteColumn(column) {
           class="-mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pb-4 md:snap-none"
           @scroll.passive="updateActiveColumn"
         >
-          <div class="flex items-start gap-4">
+          <!-- w-max: as wide as the columns, so the scroller's right padding shows after the last one -->
+          <div class="flex w-max items-start gap-4">
             <VueDraggable
               v-model="store.columns"
               handle=".column-handle"
@@ -576,15 +592,6 @@ function askDeleteColumn(column) {
                 />
               </div>
             </VueDraggable>
-
-            <button
-              type="button"
-              class="flex h-12 w-[calc(100vw-2rem)] shrink-0 snap-start items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-500 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-300 md:w-72"
-              @click="openAddColumn"
-            >
-              <i class="pi pi-plus text-xs" aria-hidden="true" />
-              Add column
-            </button>
           </div>
         </div>
       </template>
@@ -592,7 +599,7 @@ function askDeleteColumn(column) {
       <Menu ref="taskMenu" :model="taskMenuItems" popup />
       <Menu ref="columnMenu" :model="columnMenuItems" popup />
       <TaskFormDialog v-model:visible="taskDialogVisible" :task="editingTask" :columnId="newTaskColumnId" />
-      <ColumnDialog v-model:visible="columnDialogVisible" :column="editingColumn" />
+      <ColumnDialog v-model:visible="columnDialogVisible" :column="editingColumn" @created="showNewColumn" />
       <ColumnDeleteDialog v-model:visible="deleteDialogVisible" :column="deletingColumn" />
       <BoardDialog v-model:visible="boardDialogVisible" />
       <ShareDialog v-model:visible="shareDialogVisible" :board="store.board" />
