@@ -3,6 +3,7 @@ package com.example.demo.task;
 import com.example.demo.board.BoardColumn;
 import com.example.demo.board.BoardDtos.MoveTaskRequest;
 import com.example.demo.board.BoardService;
+import com.example.demo.board.LabelService;
 import com.example.demo.user.User;
 import com.example.demo.user.UserRepository;
 import org.slf4j.Logger;
@@ -27,11 +28,14 @@ public class TaskController {
     private final TaskRepository repository;
     private final UserRepository userRepository;
     private final BoardService boardService;
+    private final LabelService labelService;
 
-    public TaskController(TaskRepository repository, UserRepository userRepository, BoardService boardService) {
+    public TaskController(TaskRepository repository, UserRepository userRepository, BoardService boardService,
+                          LabelService labelService) {
         this.repository = repository;
         this.userRepository = userRepository;
         this.boardService = boardService;
+        this.labelService = labelService;
     }
 
     @GetMapping("")
@@ -62,6 +66,7 @@ public class TaskController {
         copyEditableFields(input, task);
         task.setUser(user);
         task.setBoardColumn(column);
+        applyLabels(input, task);
         task.setPosition(repository.countByBoardColumn(column));
         repository.save(task);
 
@@ -76,6 +81,7 @@ public class TaskController {
     public TaskDto updateTask(@PathVariable("id") int id, @RequestBody TaskRequest input) {
         Task task = findOwnTask(id);
         copyEditableFields(input, task);
+        applyLabels(input, task);
         return TaskDto.from(repository.save(task));
     }
 
@@ -108,6 +114,13 @@ public class TaskController {
         to.setDescription(from.description());
         to.setDue_date(from.due_date());
         to.setPriority(from.priority());
+    }
+
+    // Only labels of the task's own board are accepted (checked in LabelService).
+    private void applyLabels(TaskRequest from, Task to) {
+        if (from.labelIds() != null) {
+            to.setLabels(labelService.labelsForTask(from.labelIds(), to.getBoardColumn().getBoard()));
+        }
     }
 
     private static String currentUserEmail() {

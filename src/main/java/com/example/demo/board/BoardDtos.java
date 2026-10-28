@@ -17,14 +17,15 @@ public final class BoardDtos {
     }
 
     // Columns are sorted by position, tasks by column position and then by their own position.
-    public record BoardDetail(Integer id, String name, String slug, List<ColumnDto> columns, List<TaskDto> tasks) {
+    public record BoardDetail(Integer id, String name, String slug, List<ColumnDto> columns, List<LabelDto> labels,
+                              List<TaskDto> tasks) {
     }
 
     /**
      * What a share link shows. Kept separate from BoardDetail on purpose, so fields added
      * for the owner later don't become public by accident.
      */
-    public record SharedBoard(String name, List<ColumnDto> columns, List<TaskDto> tasks) {
+    public record SharedBoard(String name, List<ColumnDto> columns, List<LabelDto> labels, List<TaskDto> tasks) {
     }
 
     public record ShareDto(String token, LocalDateTime created) {
@@ -37,6 +38,17 @@ public final class BoardDtos {
         static ColumnDto from(BoardColumn column) {
             return new ColumnDto(column.getId(), column.getName(), column.getColor(), column.getPosition());
         }
+    }
+
+    public record LabelDto(Integer id, String name, String color) {
+        static LabelDto from(BoardLabel label) {
+            return new LabelDto(label.getId(), label.getName(), label.getColor());
+        }
+    }
+
+    // Creating a label needs both fields; when updating, a missing field stays unchanged.
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record LabelRequest(String name, String color) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

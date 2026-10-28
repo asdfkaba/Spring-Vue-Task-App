@@ -4,6 +4,8 @@ import com.example.demo.auth.jwt.TokenService;
 import com.example.demo.board.Board;
 import com.example.demo.board.BoardColumn;
 import com.example.demo.board.BoardService;
+import com.example.demo.board.BoardLabel;
+import com.example.demo.board.LabelService;
 import com.example.demo.config.WebSecurityConfig;
 import com.example.demo.task.Task;
 import com.example.demo.task.TaskController;
@@ -57,6 +59,9 @@ class TaskControllerTests {
 
     @MockBean
     BoardService boardService;
+
+    @MockBean
+    LabelService labelService;
 
     private BoardColumn aliceColumn() {
         BoardColumn column = new BoardColumn("To do", null, 0, new Board("My board", new User("Alice", ALICE, null)));
@@ -252,5 +257,52 @@ class TaskControllerTests {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(boardService);
+    }
+
+    @Test
+    void updateWithLabelIdsSetsLabelsOfTheBoard() throws Exception {
+        Task task = aliceTask();
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(task));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+        BoardLabel urgent = new BoardLabel("Urgent", "#ef4444", task.getBoardColumn().getBoard());
+        urgent.setId(7);
+        when(labelService.labelsForTask(java.util.List.of(7), task.getBoardColumn().getBoard()))
+                .thenReturn(new java.util.HashSet<>(java.util.Set.of(urgent)));
+
+        mockMvc.perform(put("/tasks/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\",\"labelIds\":[7]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.labelIds[0]").value(7));
+    }
+
+    @Test
+    void updateWithoutLabelIdsKeepsLabels() throws Exception {
+        Task task = aliceTask();
+        BoardLabel urgent = new BoardLabel("Urgent", "#ef4444", task.getBoardColumn().getBoard());
+        urgent.setId(7);
+        task.getLabels().add(urgent);
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(task));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        mockMvc.perform(put("/tasks/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.labelIds[0]").value(7));
+        verifyNoInteractions(labelService);
+    }
+
+    @Test
+    void foreignLabelIsRejected() throws Exception {
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(aliceTask()));
+        when(labelService.labelsForTask(any(), any()))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Label 99 is not a label of this board"));
+
+        mockMvc.perform(put("/tasks/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\",\"labelIds\":[99]}"))
+                .andExpect(status().isBadRequest());
+        verify(taskRepository, never()).save(any());
     }
 }

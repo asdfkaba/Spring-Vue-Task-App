@@ -30,6 +30,7 @@ export const useBoardStore = defineStore('board', {
     boardsLoaded: false,
     board: null, // the open board: { id, name }
     columns: [], // [{ id, name, color, position }]
+    labels: [], // [{ id, name, color }] of the open board, in creation order
     tasksByColumn: {}, // { [columnId]: [task, ...] }
     loading: false,
     loaded: false,
@@ -38,6 +39,8 @@ export const useBoardStore = defineStore('board', {
 
   getters: {
     columnById: (state) => (id) => state.columns.find((c) => c.id === id) ?? null,
+    // The task's labels in the board's label order.
+    labelsOf: (state) => (task) => state.labels.filter((l) => task.labelIds?.includes(l.id)),
     taskCount: (state) =>
       Object.values(state.tasksByColumn).reduce((sum, tasks) => sum + tasks.length, 0),
   },
@@ -52,6 +55,7 @@ export const useBoardStore = defineStore('board', {
     closeBoard() {
       this.board = null
       this.columns = []
+      this.labels = []
       this.tasksByColumn = {}
       this.loaded = false
     },
@@ -76,6 +80,7 @@ export const useBoardStore = defineStore('board', {
         }
         this.board = { id: detail.id, name: detail.name }
         this.columns = detail.columns
+        this.labels = detail.labels ?? []
         this.tasksByColumn = tasksByColumn
         this.loaded = true
       } finally {
@@ -148,6 +153,7 @@ export const useBoardStore = defineStore('board', {
         description: task.description,
         due_date: task.due_date,
         priority: task.priority,
+        labelIds: task.labelIds,
         ...changes,
       }
       const response = await expectOk(await sendJson(`/api/tasks/${id}`, 'PUT', payload), 'Updating task')
@@ -186,6 +192,38 @@ export const useBoardStore = defineStore('board', {
     renumberTasks() {
       for (const tasks of Object.values(this.tasksByColumn)) {
         tasks.forEach((t, i) => (t.position = i))
+      }
+    },
+
+    // ---- Labels ----
+
+    async addLabel(name, color) {
+      const response = await expectOk(
+        await sendJson(`/api/boards/${this.board.id}/labels`, 'POST', { name, color }),
+        'Adding label',
+      )
+      const label = await response.json()
+      this.labels.push(label)
+      return label
+    },
+
+    // changes: any of { name, color }
+    async updateLabel(id, changes) {
+      const response = await expectOk(await sendJson(`/api/labels/${id}`, 'PATCH', changes), 'Updating label')
+      const updated = await response.json()
+      const index = this.labels.findIndex((l) => l.id === id)
+      if (index !== -1) this.labels.splice(index, 1, updated)
+      return updated
+    },
+
+    // The backend takes the label off all tasks; do the same locally.
+    async deleteLabel(id) {
+      await expectOk(await authFetch(`/api/labels/${id}`, { method: 'DELETE' }), 'Deleting label')
+      this.labels = this.labels.filter((l) => l.id !== id)
+      for (const tasks of Object.values(this.tasksByColumn)) {
+        for (const task of tasks) {
+          if (task.labelIds?.includes(id)) task.labelIds = task.labelIds.filter((x) => x !== id)
+        }
       }
     },
 

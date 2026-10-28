@@ -49,7 +49,8 @@ public class BoardShareService {
                 .flatMap(shareRepository::findByToken)
                 .map(BoardShare::getBoard)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Share link not found"));
-        return new SharedBoard(board.getName(), boardService.columnsOf(board), boardService.tasksOf(board));
+        return new SharedBoard(board.getName(), boardService.columnsOf(board), boardService.labelsOf(board),
+                boardService.tasksOf(board));
     }
 
     private static Optional<UUID> parse(String token) {

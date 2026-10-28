@@ -5,6 +5,7 @@ import Button from 'primevue/button'
 import { fromApi, formatDue } from '@/utils/date'
 import { DEFAULT_COLUMN_COLOR, priorityOf } from '@/utils/task'
 import { renderMarkdown } from '@/utils/markdown'
+import LabelPill from '@/components/LabelPill.vue'
 
 const props = defineProps({
   task: { type: Object, required: true },
@@ -15,6 +16,8 @@ const props = defineProps({
   // Neighbour columns ({ id, name }) for the move arrows, an alternative to drag & drop.
   leftColumn: { type: Object, default: null },
   rightColumn: { type: Object, default: null },
+  // The task's labels as { id, name, color }
+  labels: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['open', 'menu', 'move'])
 
@@ -59,6 +62,10 @@ function onClick(event) {
           @click.stop="emit('menu', $event, task)"
         />
       </header>
+
+      <div v-if="labels.length" class="-mt-1 flex flex-wrap gap-1">
+        <LabelPill v-for="label in labels" :key="label.id" :label="label" />
+      </div>
 
       <!-- Sanitized in renderMarkdown. -->
       <div v-if="descriptionHtml" class="markdown" :class="{ 'line-clamp-3': !readonly }" v-html="descriptionHtml" />

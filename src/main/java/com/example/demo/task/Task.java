@@ -1,11 +1,16 @@
 package com.example.demo.task;
 
 import com.example.demo.board.BoardColumn;
+import com.example.demo.board.BoardLabel;
 import com.example.demo.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import org.hibernate.annotations.BatchSize;
+
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name="task")
@@ -46,6 +51,14 @@ public class Task {
     // Order of the task within its column, starting at 0.
     @Column(nullable = false)
     private int position;
+
+    // Labels of the task's board. BatchSize loads them for many tasks at once when a board is shown.
+    @ManyToMany
+    @JoinTable(name = "task_label",
+            joinColumns = @JoinColumn(name = "task_id"),
+            inverseJoinColumns = @JoinColumn(name = "label_id"))
+    @BatchSize(size = 100)
+    private Set<BoardLabel> labels = new HashSet<>();
 
     @PrePersist
     protected void onCreate() {
