@@ -118,6 +118,9 @@ function cancel() {
   else visible.value = false
 }
 
+// The calendar's "Clear" button doesn't empty the field by itself (PrimeVue 4.3 resets it to its
+// current value), so the template sets the date to null on clear-click.
+
 // Without a previous value the picker takes the current time (e.g. 23:07).
 // Noon is a more useful default for a freshly picked day.
 const dueWasEmpty = ref(false)
@@ -291,9 +294,21 @@ async function save() {
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <label for="task-due" class="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Due date <span class="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
-        </label>
+        <div class="flex items-center justify-between gap-2">
+          <label for="task-due" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Due date <span class="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+          </label>
+          <Button
+            v-if="form.dueDate"
+            label="Remove"
+            icon="pi pi-times"
+            text
+            size="small"
+            severity="secondary"
+            aria-label="Remove due date"
+            @click="form.dueDate = null"
+          />
+        </div>
         <DatePicker
           v-model="form.dueDate"
           inputId="task-due"
@@ -309,6 +324,7 @@ async function save() {
           fluid
           @show="dueWasEmpty = !form.dueDate"
           @date-select="onDateSelect"
+          @clear-click="form.dueDate = null"
         />
       </div>
 
