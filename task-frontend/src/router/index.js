@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { formatTitle } from '@/utils/title'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -7,7 +8,7 @@ const router = createRouter({
       path: '/',
       name: 'Login',
       component: () => import('../views/LoginView.vue'),
-      meta: { requiresAuth: false },
+      meta: { requiresAuth: false, title: 'Log in' },
     },
     {
       // :slug is the readable name part, e.g. /boards/mein-board. Without it the view
@@ -30,11 +31,17 @@ const router = createRouter({
     {
       path: '/oauth2/callback',
       component: () => import('@/auth/OAuthCallback.vue'),
-      meta: { requiresAuth: false },
+      meta: { requiresAuth: false, title: 'Signing in' },
     },
     // Old create/edit/detail pages are now dialogs on the board.
     { path: '/:pathMatch(.*)*', redirect: '/boards' },
   ],
+})
+
+// Pages with a fixed title set it here; boards set theirs in the view (usePageTitle),
+// so this doesn't touch the title on their navigations (e.g. when the search changes the URL).
+router.afterEach((to) => {
+  if (to.meta.title) document.title = formatTitle(to.meta.title)
 })
 
 export default router

@@ -121,7 +121,7 @@ async function loginWithGoogle() {
         <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500 text-white">
           <i class="pi pi-check-square text-xl" />
         </span>
-        <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Welcome to Task App</h1>
+        <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Welcome to Taskz</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">Sign in to see and manage your tasks.</p>
       </div>
 
