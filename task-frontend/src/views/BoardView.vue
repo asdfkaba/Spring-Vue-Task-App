@@ -10,7 +10,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { useBoardStore } from '@/stores/board'
 import TaskCard from '@/components/TaskCard.vue'
-import TaskFormDialog from '@/components/TaskFormDialog.vue'
+import TaskDialog from '@/components/TaskDialog.vue'
 import ColumnDialog from '@/components/ColumnDialog.vue'
 import ColumnDeleteDialog from '@/components/ColumnDeleteDialog.vue'
 import BoardList from '@/components/BoardList.vue'
@@ -219,6 +219,7 @@ async function onColumnDragEnd(event) {
 const taskDialogVisible = ref(false)
 const editingTask = ref(null)
 const newTaskColumnId = ref(null)
+const taskDialogMode = ref('view')
 
 function openCreateTask(columnId) {
   editingTask.value = null
@@ -226,8 +227,9 @@ function openCreateTask(columnId) {
   taskDialogVisible.value = true
 }
 
-function openEditTask(task) {
+function openTask(task, mode = 'view') {
   editingTask.value = task
+  taskDialogMode.value = mode
   taskDialogVisible.value = true
 }
 
@@ -241,7 +243,7 @@ const taskMenuItems = computed(() => {
     .filter((c) => c.id !== task.columnId)
     .map((c) => ({ label: c.name, icon: 'pi pi-arrow-right', command: () => moveTaskTo(task, c.id) }))
   return [
-    { label: 'Edit', icon: 'pi pi-pencil', command: () => openEditTask(task) },
+    { label: 'Edit', icon: 'pi pi-pencil', command: () => openTask(task, 'edit') },
     ...(targets.length ? [{ label: 'Move to', items: targets }] : []),
     { separator: true },
     { label: 'Delete', icon: 'pi pi-trash', class: 'menu-danger', command: () => askDeleteTask(task) },
@@ -575,7 +577,7 @@ function askDeleteColumn(column) {
                     :color="column.color"
                     :leftColumn="neighbours(index).left"
                     :rightColumn="neighbours(index).right"
-                    @edit="openEditTask"
+                    @open="openTask"
                     @menu="showTaskMenu"
                     @move="moveTaskTo"
                   />
@@ -598,7 +600,12 @@ function askDeleteColumn(column) {
 
       <Menu ref="taskMenu" :model="taskMenuItems" popup />
       <Menu ref="columnMenu" :model="columnMenuItems" popup />
-      <TaskFormDialog v-model:visible="taskDialogVisible" :task="editingTask" :columnId="newTaskColumnId" />
+      <TaskDialog
+        v-model:visible="taskDialogVisible"
+        :task="editingTask"
+        :initialMode="taskDialogMode"
+        :columnId="newTaskColumnId"
+      />
       <ColumnDialog v-model:visible="columnDialogVisible" :column="editingColumn" @created="showNewColumn" />
       <ColumnDeleteDialog v-model:visible="deleteDialogVisible" :column="deletingColumn" />
       <BoardDialog v-model:visible="boardDialogVisible" />

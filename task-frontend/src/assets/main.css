@@ -76,6 +76,19 @@
   .markdown hr {
     @apply border-slate-200 dark:border-slate-700;
   }
+  /* Task detail view: more room, so normal text size and graded headings. */
+  .markdown-large {
+    @apply text-[0.9375rem] leading-relaxed text-slate-700 dark:text-slate-300;
+  }
+  .markdown-large > * + * {
+    @apply mt-3;
+  }
+  .markdown-large h1 {
+    @apply text-lg;
+  }
+  .markdown-large h2 {
+    @apply text-base;
+  }
   .markdown table {
     @apply block overflow-x-auto text-xs;
   }
