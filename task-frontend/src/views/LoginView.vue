@@ -116,13 +116,13 @@ async function loginWithGoogle() {
 
 <template>
   <div class="flex min-h-[70vh] items-center justify-center">
-    <div class="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <div class="w-full max-w-sm rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm">
       <div class="mb-8 flex flex-col items-center gap-3 text-center">
         <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500 text-white">
           <i class="pi pi-check-square text-xl" />
         </span>
-        <h1 class="text-xl font-semibold text-slate-900">Welcome to Task App</h1>
-        <p class="text-sm text-slate-500">Sign in to see and manage your tasks.</p>
+        <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Welcome to Task App</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Sign in to see and manage your tasks.</p>
       </div>
 
       <div class="flex flex-col gap-3">

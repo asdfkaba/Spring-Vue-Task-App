@@ -244,7 +244,7 @@ const taskMenuItems = computed(() => {
     { label: 'Edit', icon: 'pi pi-pencil', command: () => openEditTask(task) },
     ...(targets.length ? [{ label: 'Move to', items: targets }] : []),
     { separator: true },
-    { label: 'Delete', icon: 'pi pi-trash', class: 'text-red-600', command: () => askDeleteTask(task) },
+    { label: 'Delete', icon: 'pi pi-trash', class: 'menu-danger', command: () => askDeleteTask(task) },
   ]
 })
 
@@ -321,7 +321,7 @@ const columnMenuItems = computed(() => {
     {
       label: 'Delete',
       icon: 'pi pi-trash',
-      class: 'text-red-600',
+      class: 'menu-danger',
       // The backend keeps at least one column per board.
       disabled: store.columns.length === 1,
       command: () => askDeleteColumn(column),
@@ -370,7 +370,7 @@ function askDeleteColumn(column) {
 <template>
   <div class="flex min-h-[calc(100vh-3.5rem)]">
     <aside
-      class="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 flex-col border-r border-slate-200 bg-white md:flex"
+      class="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 md:flex"
       :class="sidebarCollapsed ? 'w-12 items-center py-3' : 'w-64 p-3'"
     >
       <Button
@@ -385,7 +385,7 @@ function askDeleteColumn(column) {
       />
       <template v-else>
         <div class="mb-2 flex items-center justify-between pl-3">
-          <span class="text-xs font-semibold tracking-wide text-slate-500 uppercase">Boards</span>
+          <span class="text-xs font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase">Boards</span>
           <Button
             icon="pi pi-angle-double-left"
             text
@@ -418,10 +418,10 @@ function askDeleteColumn(column) {
             @click="drawerVisible = true"
           />
           <div class="min-w-0">
-            <h1 class="truncate text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">
+            <h1 class="truncate text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100 md:text-2xl">
               {{ store.board?.name ?? 'Boards' }}
             </h1>
-            <p v-if="store.loaded" class="hidden text-sm text-slate-500 md:block">
+            <p v-if="store.loaded" class="hidden text-sm text-slate-500 dark:text-slate-400 md:block">
               {{ store.taskCount }} {{ store.taskCount === 1 ? 'task' : 'tasks' }} ·
               {{ store.columns.length }} {{ store.columns.length === 1 ? 'column' : 'columns' }}
             </p>
@@ -449,11 +449,11 @@ function askDeleteColumn(column) {
 
       <div
         v-if="store.boardsLoaded && store.boards.length === 0"
-        class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center"
+        class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-6 py-14 text-center"
       >
-        <i class="pi pi-th-large text-4xl text-slate-300" />
-        <p class="font-medium text-slate-700">No boards yet</p>
-        <p class="text-sm text-slate-500">Create a board to start collecting tasks.</p>
+        <i class="pi pi-th-large text-4xl text-slate-300 dark:text-slate-600" />
+        <p class="font-medium text-slate-700 dark:text-slate-300">No boards yet</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Create a board to start collecting tasks.</p>
         <Button label="Create your first board" icon="pi pi-plus" class="mt-2" @click="openCreateBoard" />
       </div>
 
@@ -465,7 +465,7 @@ function askDeleteColumn(column) {
         <!-- Small screens: tabs to jump between columns -->
         <nav
           ref="tabBar"
-          class="sticky top-14 z-[5] -mx-4 -mt-2 flex gap-1 overflow-x-auto border-b border-slate-200 bg-slate-50 px-4 md:hidden"
+          class="sticky top-14 z-[5] -mx-4 -mt-2 flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 md:hidden"
           aria-label="Columns"
         >
           <button
@@ -476,20 +476,20 @@ function askDeleteColumn(column) {
             class="flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm whitespace-nowrap"
             :class="
               column.id === activeColumnId
-                ? 'border-slate-900 font-semibold text-slate-900'
-                : 'border-transparent text-slate-500'
+                ? 'border-slate-900 dark:border-slate-100 font-semibold text-slate-900 dark:text-slate-100'
+                : 'border-transparent text-slate-500 dark:text-slate-400'
             "
             :aria-current="column.id === activeColumnId ? 'true' : undefined"
             @click="scrollToColumn(column.id)"
           >
             {{ column.name }}
-            <span class="rounded-full bg-slate-200 px-1.5 text-xs font-medium text-slate-600">
+            <span class="rounded-full bg-slate-200 dark:bg-slate-800 px-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
               {{ store.tasksByColumn[column.id].length }}
             </span>
           </button>
           <button
             type="button"
-            class="flex shrink-0 items-center px-3 py-2.5 text-slate-500"
+            class="flex shrink-0 items-center px-3 py-2.5 text-slate-500 dark:text-slate-400"
             aria-label="Add column"
             @click="openAddColumn"
           >
@@ -516,19 +516,19 @@ function askDeleteColumn(column) {
                 v-for="(column, index) in store.columns"
                 :key="column.id"
                 :data-column-id="column.id"
-                class="flex w-[calc(100vw-2rem)] shrink-0 snap-start flex-col rounded-xl bg-slate-100 md:w-72"
+                class="flex w-[calc(100vw-2rem)] shrink-0 snap-start flex-col rounded-xl bg-slate-100 dark:bg-slate-900 md:w-72"
               >
                 <header class="flex items-center gap-1 px-2 pt-2">
                   <button
                     type="button"
-                    class="column-handle hidden h-8 w-6 cursor-grab items-center justify-center text-slate-400 hover:text-slate-600 active:cursor-grabbing md:flex"
+                    class="column-handle hidden h-8 w-6 cursor-grab items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 active:cursor-grabbing md:flex"
                     aria-label="Drag to reorder column"
                     title="Drag to reorder"
                   >
                     <i class="pi pi-bars text-xs" />
                   </button>
-                  <h2 class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700">{{ column.name }}</h2>
-                  <span class="rounded-full bg-white px-2 text-xs font-medium text-slate-500">
+                  <h2 class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700 dark:text-slate-300">{{ column.name }}</h2>
+                  <span class="rounded-full bg-white dark:bg-slate-800 px-2 text-xs font-medium text-slate-500 dark:text-slate-400">
                     {{ store.tasksByColumn[column.id].length }}
                   </span>
                   <Button
@@ -579,7 +579,7 @@ function askDeleteColumn(column) {
 
             <button
               type="button"
-              class="flex h-12 w-[calc(100vw-2rem)] shrink-0 snap-start items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 text-sm font-medium text-slate-500 hover:border-slate-400 hover:text-slate-700 md:w-72"
+              class="flex h-12 w-[calc(100vw-2rem)] shrink-0 snap-start items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-500 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-300 md:w-72"
               @click="openAddColumn"
             >
               <i class="pi pi-plus text-xs" aria-hidden="true" />

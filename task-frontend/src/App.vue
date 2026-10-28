@@ -8,6 +8,7 @@ import { useToast } from 'primevue/usetoast'
 import { useBoardStore } from '@/stores/board'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { useTheme } from '@/composables/useTheme'
 
 const boardStore = useBoardStore()
 const authStore = useAuthStore()
@@ -17,6 +18,14 @@ const route = useRoute()
 const fullWidth = computed(() => route.meta.fullWidth === true)
 const toast = useToast()
 const toastStore = useToastStore()
+
+const theme = useTheme()
+const THEME_LABELS = {
+  system: { icon: 'pi pi-desktop', label: 'Theme: system' },
+  light: { icon: 'pi pi-sun', label: 'Theme: light' },
+  dark: { icon: 'pi pi-moon', label: 'Theme: dark' },
+}
+const themeButton = computed(() => THEME_LABELS[theme.choice.value])
 
 watch(
   () => toastStore.toasts,
@@ -56,20 +65,38 @@ onMounted(async () => {
 
 <template>
   <div class="min-h-screen">
-    <header class="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
+    <header class="sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
       <div class="mx-auto flex h-14 items-center justify-between gap-4 px-4" :class="fullWidth ? 'max-w-none' : 'max-w-6xl'">
-        <RouterLink to="/boards" class="flex items-center gap-2 font-semibold text-slate-900">
+        <RouterLink to="/boards" class="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
           <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white">
             <i class="pi pi-check-square" />
           </span>
           Task App
         </RouterLink>
 
-        <div v-if="authStore.isAuthenticated" class="flex min-w-0 items-center gap-2">
-          <span class="hidden truncate text-sm text-slate-500 sm:inline">
+        <div class="flex min-w-0 items-center gap-2">
+          <span v-if="authStore.isAuthenticated" class="hidden truncate text-sm text-slate-500 dark:text-slate-400 sm:inline">
             <i class="pi pi-user mr-1.5 text-xs" />{{ authStore.user?.email }}
           </span>
-          <Button label="Log out" icon="pi pi-sign-out" severity="secondary" text size="small" @click="logout" />
+          <Button
+            :icon="themeButton.icon"
+            :aria-label="themeButton.label"
+            :title="`${themeButton.label} (click to change)`"
+            severity="secondary"
+            text
+            rounded
+            size="small"
+            @click="theme.cycle"
+          />
+          <Button
+            v-if="authStore.isAuthenticated"
+            label="Log out"
+            icon="pi pi-sign-out"
+            severity="secondary"
+            text
+            size="small"
+            @click="logout"
+          />
         </div>
       </div>
     </header>

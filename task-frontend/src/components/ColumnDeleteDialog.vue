@@ -60,8 +60,8 @@ async function confirmDelete() {
     :draggable="false"
   >
     <form v-if="column" id="column-delete-form" class="flex flex-col gap-5 pt-1" @submit.prevent="confirmDelete">
-      <p class="text-sm text-slate-600">
-        <strong class="text-slate-900">{{ column.name }}</strong> still has
+      <p class="text-sm text-slate-600 dark:text-slate-400">
+        <strong class="text-slate-900 dark:text-slate-100">{{ column.name }}</strong> still has
         {{ taskCount }} {{ taskCount === 1 ? 'task' : 'tasks' }}. What should happen to
         {{ taskCount === 1 ? 'it' : 'them' }}?
       </p>
@@ -69,7 +69,7 @@ async function confirmDelete() {
       <div class="flex flex-col gap-3">
         <div class="flex items-center gap-2">
           <RadioButton v-model="action" inputId="delete-action-move" value="move" />
-          <label for="delete-action-move" class="text-sm text-slate-700">Move to</label>
+          <label for="delete-action-move" class="text-sm text-slate-700 dark:text-slate-300">Move to</label>
           <Select
             v-model="targetId"
             :options="otherColumns"
@@ -83,15 +83,15 @@ async function confirmDelete() {
         </div>
         <div class="flex items-center gap-2">
           <RadioButton v-model="action" inputId="delete-action-delete" value="delete" />
-          <label for="delete-action-delete" class="text-sm text-red-700">
+          <label for="delete-action-delete" class="text-sm text-red-700 dark:text-red-400">
             Delete {{ taskCount === 1 ? 'the task' : `all ${taskCount} tasks` }}
           </label>
         </div>
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <label for="delete-confirm-name" class="text-sm text-slate-700">
-          To confirm, type <strong class="font-semibold text-slate-900 select-all">{{ column.name }}</strong>
+        <label for="delete-confirm-name" class="text-sm text-slate-700 dark:text-slate-300">
+          To confirm, type <strong class="font-semibold text-slate-900 dark:text-slate-100 select-all">{{ column.name }}</strong>
         </label>
         <InputText id="delete-confirm-name" v-model="typedName" autocomplete="off" fluid />
       </div>

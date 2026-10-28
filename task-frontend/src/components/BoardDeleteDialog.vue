@@ -48,13 +48,13 @@ async function confirmDelete() {
     :draggable="false"
   >
     <form v-if="board" id="board-delete-form" class="flex flex-col gap-5 pt-1" @submit.prevent="confirmDelete">
-      <p class="text-sm text-slate-600">
-        <strong class="text-slate-900">{{ board.name }}</strong> will be deleted with all its columns and tasks.
+      <p class="text-sm text-slate-600 dark:text-slate-400">
+        <strong class="text-slate-900 dark:text-slate-100">{{ board.name }}</strong> will be deleted with all its columns and tasks.
         This cannot be undone.
       </p>
       <div class="flex flex-col gap-1.5">
-        <label for="board-delete-confirm" class="text-sm text-slate-700">
-          To confirm, type <strong class="font-semibold text-slate-900 select-all">{{ board.name }}</strong>
+        <label for="board-delete-confirm" class="text-sm text-slate-700 dark:text-slate-300">
+          To confirm, type <strong class="font-semibold text-slate-900 dark:text-slate-100 select-all">{{ board.name }}</strong>
         </label>
         <InputText id="board-delete-confirm" v-model="typedName" autocomplete="off" fluid />
       </div>
