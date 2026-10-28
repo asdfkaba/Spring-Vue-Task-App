@@ -1,6 +1,7 @@
 package com.example.demo.board;
 
 import com.example.demo.task.Task;
+import com.example.demo.task.TaskHistoryService;
 import com.example.demo.task.TaskRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -23,11 +24,14 @@ public class LabelService {
     private final BoardService boardService;
     private final BoardLabelRepository labelRepository;
     private final TaskRepository taskRepository;
+    private final TaskHistoryService historyService;
 
-    public LabelService(BoardService boardService, BoardLabelRepository labelRepository, TaskRepository taskRepository) {
+    public LabelService(BoardService boardService, BoardLabelRepository labelRepository, TaskRepository taskRepository,
+                        TaskHistoryService historyService) {
         this.boardService = boardService;
         this.labelRepository = labelRepository;
         this.taskRepository = taskRepository;
+        this.historyService = historyService;
     }
 
     @Transactional
@@ -54,7 +58,9 @@ public class LabelService {
     public void deleteLabel(int labelId, String email) {
         BoardLabel label = findOwnLabel(labelId, email);
         for (Task task : taskRepository.findByLabelsContaining(label)) {
+            TaskHistoryService.Snapshot before = TaskHistoryService.Snapshot.of(task);
             task.getLabels().remove(label);
+            historyService.recordUpdate(before, task, email);
         }
         labelRepository.delete(label);
     }

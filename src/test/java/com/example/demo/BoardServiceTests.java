@@ -2,6 +2,7 @@ package com.example.demo;
 
 import com.example.demo.board.*;
 import com.example.demo.task.Task;
+import com.example.demo.task.TaskHistoryService;
 import com.example.demo.task.TaskRepository;
 import com.example.demo.user.User;
 import com.example.demo.user.UserRepository;
@@ -22,7 +23,7 @@ import static org.assertj.core.groups.Tuple.tuple;
 
 // Runs against H2 so the ordering logic is checked with real queries.
 @DataJpaTest
-@Import(BoardService.class)
+@Import({BoardService.class, TaskHistoryService.class})
 class BoardServiceTests {
 
     static final String ALICE = "alice@example.com";

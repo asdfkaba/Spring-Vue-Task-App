@@ -5,6 +5,7 @@ import com.example.demo.board.BoardService;
 import com.example.demo.board.LabelService;
 import com.example.demo.config.WebSecurityConfig;
 import com.example.demo.task.TaskController;
+import com.example.demo.task.TaskHistoryService;
 import com.example.demo.task.TaskRepository;
 import com.example.demo.user.CustomUserDetailsService;
 import com.example.demo.user.UserRepository;
@@ -42,6 +43,9 @@ class SecurityTests {
 
     @MockBean
     LabelService labelService;
+
+    @MockBean
+    TaskHistoryService historyService;
 
     @Test
     void ohneLoginKeinZugriff() throws Exception {

@@ -195,6 +195,11 @@ export const useBoardStore = defineStore('board', {
       }
     },
 
+    // Newest first: [{ id, type, at, user, changes }]
+    async fetchTaskHistory(id) {
+      return (await expectOk(await authFetch(`/api/tasks/${id}/history`), 'Loading history')).json()
+    },
+
     // ---- Labels ----
 
     async addLabel(name, color) {
