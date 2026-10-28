@@ -54,7 +54,7 @@ async function save() {
     :draggable="false"
   >
     <form id="board-form" class="flex flex-col gap-1.5 pt-1" @submit.prevent="save">
-      <label for="board-name" class="text-sm font-medium text-slate-700">Name</label>
+      <label for="board-name" class="text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
       <InputText
         id="board-name"
         v-model="name"
@@ -65,7 +65,7 @@ async function save() {
         fluid
       />
       <Message v-if="nameMissing" severity="error" size="small" variant="simple">Please enter a name.</Message>
-      <p class="text-xs text-slate-500">The board starts with the columns To do, In progress and Done.</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400">The board starts with the columns To do, In progress and Done.</p>
     </form>
 
     <template #footer>

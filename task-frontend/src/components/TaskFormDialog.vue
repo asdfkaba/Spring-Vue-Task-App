@@ -106,7 +106,7 @@ async function save() {
   >
     <form id="task-form" class="flex flex-col gap-5 pt-1" @submit.prevent="save">
       <div class="flex flex-col gap-1.5">
-        <label for="task-title" class="text-sm font-medium text-slate-700">Title</label>
+        <label for="task-title" class="text-sm font-medium text-slate-700 dark:text-slate-300">Title</label>
         <InputText
           id="task-title"
           v-model="form.title"
@@ -122,16 +122,16 @@ async function save() {
 
       <div class="flex flex-col gap-1.5">
         <div class="flex items-end justify-between gap-2">
-          <label for="task-description" class="text-sm font-medium text-slate-700">
-            Description <span class="font-normal text-slate-400">(optional)</span>
+          <label for="task-description" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Description <span class="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
           </label>
-          <div role="group" aria-label="Description mode" class="flex rounded-md bg-slate-100 p-0.5 text-xs">
+          <div role="group" aria-label="Description mode" class="flex rounded-md bg-slate-100 dark:bg-slate-800 p-0.5 text-xs">
             <button
               v-for="mode in ['write', 'preview']"
               :key="mode"
               type="button"
               class="rounded px-2 py-0.5 font-medium capitalize"
-              :class="descriptionMode === mode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+              :class="descriptionMode === mode ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'"
               :aria-pressed="descriptionMode === mode"
               @click="descriptionMode = mode"
             >
@@ -153,20 +153,20 @@ async function save() {
         <div
           v-if="descriptionMode === 'preview'"
           data-testid="description-preview"
-          class="max-h-80 min-h-24 overflow-y-auto rounded-md border border-slate-200 px-3 py-2"
+          class="max-h-80 min-h-24 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2"
         >
           <!-- Sanitized in renderMarkdown. -->
           <div v-if="previewHtml" class="markdown" v-html="previewHtml" />
-          <p v-else class="text-sm text-slate-400">Nothing to preview</p>
+          <p v-else class="text-sm text-slate-400 dark:text-slate-500">Nothing to preview</p>
         </div>
-        <p class="text-xs text-slate-400">
+        <p class="text-xs text-slate-400 dark:text-slate-500">
           Markdown supported: **bold**, *italic*, [links](https://…), lists, - [ ] checkboxes, `code`
         </p>
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <label for="task-due" class="text-sm font-medium text-slate-700">
-          Due date <span class="font-normal text-slate-400">(optional)</span>
+        <label for="task-due" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+          Due date <span class="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
         </label>
         <DatePicker
           v-model="form.dueDate"
@@ -187,7 +187,7 @@ async function save() {
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium text-slate-700">Priority</span>
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Priority</span>
         <SelectButton
           v-model="form.priority"
           :options="PRIORITY_OPTIONS"

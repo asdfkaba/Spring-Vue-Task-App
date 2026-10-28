@@ -64,7 +64,7 @@ async function save() {
   >
     <form id="column-form" class="flex flex-col gap-5 pt-1" @submit.prevent="save">
       <div class="flex flex-col gap-1.5">
-        <label for="column-name" class="text-sm font-medium text-slate-700">Name</label>
+        <label for="column-name" class="text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
         <InputText
           id="column-name"
           v-model="form.name"
@@ -80,14 +80,14 @@ async function save() {
       </div>
 
       <div class="flex flex-col gap-2">
-        <span class="text-sm font-medium text-slate-700">
-          Color <span class="font-normal text-slate-400">(marks the tasks in this column)</span>
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
+          Color <span class="font-normal text-slate-400 dark:text-slate-500">(marks the tasks in this column)</span>
         </span>
         <div class="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            class="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-400"
-            :class="{ 'ring-2 ring-slate-900 ring-offset-2': form.color === null }"
+            class="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 dark:text-slate-500"
+            :class="{ 'ring-2 ring-slate-900 dark:ring-slate-100 ring-offset-2 dark:ring-offset-slate-900': form.color === null }"
             title="No color"
             aria-label="No color"
             @click="form.color = null"
@@ -99,15 +99,15 @@ async function save() {
             :key="preset"
             type="button"
             class="h-8 w-8 rounded-full"
-            :class="{ 'ring-2 ring-slate-900 ring-offset-2': form.color === preset }"
+            :class="{ 'ring-2 ring-slate-900 dark:ring-slate-100 ring-offset-2 dark:ring-offset-slate-900': form.color === preset }"
             :style="{ backgroundColor: preset }"
             :title="preset"
             :aria-label="`Color ${preset}`"
             @click="form.color = preset"
           />
           <label
-            class="relative flex h-8 w-8 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-slate-300 text-slate-500"
-            :class="{ 'ring-2 ring-slate-900 ring-offset-2': isCustomColor }"
+            class="relative flex h-8 w-8 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400"
+            :class="{ 'ring-2 ring-slate-900 dark:ring-slate-100 ring-offset-2 dark:ring-offset-slate-900': isCustomColor }"
             :style="isCustomColor ? { backgroundColor: form.color } : {}"
             title="Custom color"
           >

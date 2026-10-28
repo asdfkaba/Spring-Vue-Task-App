@@ -33,8 +33,8 @@ function onClick(event) {
 
 <template>
   <article
-    class="group relative flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
-    :class="readonly ? '' : 'cursor-grab transition hover:border-slate-300 hover:shadow-md active:cursor-grabbing'"
+    class="group relative flex flex-col overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm"
+    :class="readonly ? '' : 'cursor-grab transition hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-md active:cursor-grabbing'"
     :tabindex="readonly ? undefined : 0"
     :data-task-id="task.id"
     @click="onClick"
@@ -44,7 +44,7 @@ function onClick(event) {
 
     <div class="flex flex-col gap-2 py-3 pr-2 pl-4">
       <header class="flex items-start justify-between gap-2">
-        <h3 class="text-sm leading-snug font-semibold break-words text-slate-900">
+        <h3 class="text-sm leading-snug font-semibold break-words text-slate-900 dark:text-slate-100">
           {{ task.title }}
         </h3>
         <Button
@@ -64,11 +64,18 @@ function onClick(event) {
       <div v-if="descriptionHtml" class="markdown" :class="{ 'line-clamp-3': !readonly }" v-html="descriptionHtml" />
 
       <div v-if="priority || due || showArrows" class="flex flex-wrap items-center gap-2 text-xs">
-        <Tag v-if="priority" :value="priority.label" :severity="priority.severity" class="!text-xs" />
+        <!-- The gray "Low" tag has the card's color in dark mode, so it gets a lighter background. -->
+        <Tag
+          v-if="priority"
+          :value="priority.label"
+          :severity="priority.severity"
+          class="!text-xs"
+          :class="{ 'dark:bg-slate-700': priority.severity === 'secondary' }"
+        />
         <span
           v-if="due"
           class="flex items-center gap-1 font-medium"
-          :class="isOverdue ? 'text-red-600' : 'text-slate-500'"
+          :class="isOverdue ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'"
         >
           <i class="pi text-xs" :class="isOverdue ? 'pi-exclamation-circle' : 'pi-calendar'" />
           {{ formatDue(due) }}

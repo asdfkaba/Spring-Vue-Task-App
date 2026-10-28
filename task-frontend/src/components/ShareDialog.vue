@@ -107,11 +107,11 @@ function askStop() {
     :draggable="false"
   >
     <div class="flex flex-col gap-4 pt-1">
-      <p class="text-sm text-slate-600">
+      <p class="text-sm text-slate-600 dark:text-slate-400">
         Anyone with the link can view this board without logging in. They can't change anything.
       </p>
 
-      <p v-if="loading" class="text-sm text-slate-400">Loading…</p>
+      <p v-if="loading" class="text-sm text-slate-400 dark:text-slate-500">Loading…</p>
 
       <Button
         v-else-if="!share"
@@ -135,7 +135,7 @@ function askStop() {
           />
           <Button label="Copy" icon="pi pi-copy" class="shrink-0" @click="copyLink" />
         </div>
-        <p v-if="created" class="text-xs text-slate-500">Created {{ formatShort(created) }}</p>
+        <p v-if="created" class="text-xs text-slate-500 dark:text-slate-400">Created {{ formatShort(created) }}</p>
         <div class="flex flex-wrap gap-2">
           <Button
             label="Replace link"

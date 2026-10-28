@@ -3,9 +3,16 @@
 
 @import "tailwindcss";
 
+/* Dark mode is switched by the "dark" class on <html> (useTheme), not only by the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
+  /* Native controls and scrollbars follow the theme. */
+  html.dark {
+    color-scheme: dark;
+  }
   body {
-    @apply min-h-screen bg-slate-50 text-slate-800 antialiased;
+    @apply min-h-screen bg-slate-50 text-slate-800 antialiased dark:bg-slate-950 dark:text-slate-200;
     font-family:
       Inter,
       ui-sans-serif,
@@ -17,19 +24,26 @@
   }
 }
 
+/* Destructive menu entries. PrimeVue colors the label and icon, not the item itself. */
+@layer components {
+  .menu-danger :is(.p-menu-item-label, .p-menu-item-icon) {
+    @apply text-red-600 dark:text-red-400;
+  }
+}
+
 /* Rendered Markdown of task descriptions (utils/markdown.js). Kept compact for cards. */
 @layer components {
   .markdown {
-    @apply text-sm break-words text-slate-600;
+    @apply text-sm break-words text-slate-600 dark:text-slate-400;
   }
   .markdown > * + * {
     @apply mt-1.5;
   }
   .markdown :is(h1, h2, h3, h4, h5, h6) {
-    @apply text-sm font-semibold text-slate-800;
+    @apply text-sm font-semibold text-slate-800 dark:text-slate-200;
   }
   .markdown a[href] {
-    @apply text-blue-600 underline underline-offset-2 hover:text-blue-700;
+    @apply text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300;
   }
   .markdown :is(ul, ol) {
     @apply pl-5;
@@ -48,24 +62,24 @@
     @apply mr-1.5 align-[-0.125em];
   }
   .markdown code {
-    @apply rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.85em] text-slate-700;
+    @apply rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.85em] text-slate-700 dark:bg-slate-700/60 dark:text-slate-200;
   }
   .markdown pre {
-    @apply overflow-x-auto rounded bg-slate-100 p-2;
+    @apply overflow-x-auto rounded bg-slate-100 p-2 dark:bg-slate-700/60;
   }
   .markdown pre code {
     @apply bg-transparent p-0;
   }
   .markdown blockquote {
-    @apply border-l-2 border-slate-300 pl-2 text-slate-500;
+    @apply border-l-2 border-slate-300 pl-2 text-slate-500 dark:border-slate-600 dark:text-slate-400;
   }
   .markdown hr {
-    @apply border-slate-200;
+    @apply border-slate-200 dark:border-slate-700;
   }
   .markdown table {
     @apply block overflow-x-auto text-xs;
   }
   .markdown :is(th, td) {
-    @apply border border-slate-200 px-1.5 py-0.5;
+    @apply border border-slate-200 px-1.5 py-0.5 dark:border-slate-700;
   }
 }

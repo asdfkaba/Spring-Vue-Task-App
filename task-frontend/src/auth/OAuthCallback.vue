@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-slate-500">
+  <div class="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-slate-500 dark:text-slate-400">
     <i class="pi pi-spin pi-spinner text-2xl" />
     <p>Signing you in…</p>
   </div>
