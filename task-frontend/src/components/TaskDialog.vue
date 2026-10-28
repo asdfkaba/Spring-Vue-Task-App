@@ -59,10 +59,10 @@ const titleMissing = computed(() => submitted.value && !form.title.trim())
 const descriptionMode = ref('write') // 'write' | 'preview'
 const previewHtml = computed(() => renderMarkdown(form.description))
 
-const header = computed(() => {
-  if (isNew.value) return 'New task'
-  return mode.value === 'view' ? 'Task' : 'Edit task'
-})
+const MODE_OPTIONS = [
+  { value: 'view', label: 'View', icon: 'pi pi-eye' },
+  { value: 'edit', label: 'Edit', icon: 'pi pi-pencil' },
+]
 
 function fillForm() {
   const t = current.value
@@ -167,31 +167,34 @@ async function save() {
     :draggable="false"
   >
     <template #header>
-      <div class="flex min-w-0 flex-1 items-center gap-3">
-        <span class="p-dialog-title">{{ header }}</span>
-        <div
-          v-if="!isNew"
-          role="group"
-          aria-label="Dialog mode"
-          class="flex rounded-md bg-slate-100 p-0.5 text-sm dark:bg-slate-800"
+      <span v-if="isNew" class="p-dialog-title">New task</span>
+      <!--
+        The toggle is the header of an existing task; the mode tells which one it is.
+        Own buttons instead of SelectButton: that one shows the new choice right away,
+        even when switching is cancelled in the "Discard changes?" question.
+      -->
+      <div
+        v-else
+        role="group"
+        aria-label="Dialog mode"
+        class="mr-3 flex flex-1 gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-800"
+      >
+        <button
+          v-for="option in MODE_OPTIONS"
+          :key="option.value"
+          type="button"
+          class="flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors"
+          :class="
+            mode === option.value
+              ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
+              : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+          "
+          :aria-pressed="mode === option.value"
+          @click="switchMode(option.value)"
         >
-          <button
-            v-for="m in ['view', 'edit']"
-            :key="m"
-            type="button"
-            class="flex items-center gap-1.5 rounded px-2.5 py-1 font-medium capitalize"
-            :class="
-              mode === m
-                ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-slate-200'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
-            "
-            :aria-pressed="mode === m"
-            @click="switchMode(m)"
-          >
-            <i class="pi text-xs" :class="m === 'view' ? 'pi-eye' : 'pi-pencil'" aria-hidden="true" />
-            {{ m }}
-          </button>
-        </div>
+          <i :class="option.icon" aria-hidden="true" />
+          {{ option.label }}
+        </button>
       </div>
     </template>
 
