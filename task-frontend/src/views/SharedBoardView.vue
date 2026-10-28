@@ -7,6 +7,8 @@ import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import TaskCard from '@/components/TaskCard.vue'
 import TaskDetails from '@/components/TaskDetails.vue'
+import BoardFilter from '@/components/BoardFilter.vue'
+import { useBoardFilter } from '@/composables/useBoardFilter'
 
 // Read-only board behind a share link. Works without login, so it uses plain fetch.
 const route = useRoute()
@@ -43,6 +45,20 @@ async function load(token) {
 }
 
 const labelsOf = (task) => (board.value?.labels ?? []).filter((l) => task.labelIds?.includes(l.id))
+
+const {
+  text: filterText,
+  labelIds: filterLabelIds,
+  terms: filterTerms,
+  active: filterActive,
+  match: matchOf,
+  clear: clearFilter,
+} = useBoardFilter(labelsOf)
+const visibleCount = (columnId) => tasksByColumn.value[columnId].filter((t) => matchOf(t).matches).length
+const countLabel = (columnId) => {
+  const total = tasksByColumn.value[columnId].length
+  return filterActive.value ? `${visibleCount(columnId)} / ${total}` : `${total}`
+}
 
 // The task shown in the dialog; read-only, so there is no edit mode.
 const openTask = ref(null)
@@ -91,6 +107,15 @@ watch(
         <Tag value="Read only" icon="pi pi-eye" severity="secondary" />
       </div>
 
+      <BoardFilter
+        v-model:text="filterText"
+        v-model:labelIds="filterLabelIds"
+        :labels="board.labels ?? []"
+        :active="filterActive"
+        class="-mt-3"
+        @clear="clearFilter"
+      />
+
       <div class="-mx-4 overflow-x-auto px-4 pb-4">
         <div class="flex items-start gap-4">
           <div
@@ -102,10 +127,13 @@ watch(
             <header class="flex items-center gap-2 px-4 pt-3">
               <h2 class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700 dark:text-slate-300">{{ column.name }}</h2>
               <span class="rounded-full bg-white dark:bg-slate-800 px-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                {{ tasksByColumn[column.id].length }}
+                {{ countLabel(column.id) }}
               </span>
             </header>
             <div class="flex min-h-12 flex-col gap-2 p-2">
+              <p v-if="filterActive && visibleCount(column.id) === 0" class="px-2 text-sm text-slate-400 dark:text-slate-500">
+                No matches
+              </p>
               <TaskCard
                 v-for="task in tasksByColumn[column.id]"
                 :key="task.id"
@@ -113,6 +141,9 @@ watch(
                 :color="column.color"
                 :labels="labelsOf(task)"
                 readonly
+                v-show="matchOf(task).matches"
+                :terms="filterTerms"
+                :matchInDescription="matchOf(task).inDescription && !matchOf(task).inTitle"
                 @open="showTask"
               />
             </div>

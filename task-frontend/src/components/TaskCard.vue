@@ -6,6 +6,7 @@ import { fromApi, formatDue } from '@/utils/date'
 import { DEFAULT_COLUMN_COLOR, priorityOf } from '@/utils/task'
 import { renderMarkdown } from '@/utils/markdown'
 import LabelPill from '@/components/LabelPill.vue'
+import { highlight } from '@/utils/search'
 
 const props = defineProps({
   task: { type: Object, required: true },
@@ -18,6 +19,10 @@ const props = defineProps({
   rightColumn: { type: Object, default: null },
   // The task's labels as { id, name, color }
   labels: { type: Array, default: () => [] },
+  // Search terms to highlight in the title (see utils/search).
+  terms: { type: Array, default: () => [] },
+  // The search matched the description but not the title; say so, the description may be cut off.
+  matchInDescription: { type: Boolean, default: false },
 })
 const emit = defineEmits(['open', 'menu', 'move'])
 
@@ -26,6 +31,7 @@ const due = computed(() => fromApi(props.task.due_date))
 const isOverdue = computed(() => due.value !== null && due.value < new Date())
 const showArrows = computed(() => !props.readonly && (props.leftColumn || props.rightColumn))
 const descriptionHtml = computed(() => renderMarkdown(props.task.description))
+const titlePieces = computed(() => highlight(props.task.title, props.terms))
 
 // A click on a link in the description follows the link instead of opening the task.
 function onClick(event) {
@@ -51,7 +57,10 @@ function onClick(event) {
     <div class="flex flex-col gap-2 py-3 pr-2 pl-4">
       <header class="flex items-start justify-between gap-2">
         <h3 class="text-sm leading-snug font-semibold break-words text-slate-900 dark:text-slate-100">
-          {{ task.title }}
+          <template v-for="(piece, i) in titlePieces" :key="i">
+            <mark v-if="piece.hit" class="rounded-sm bg-yellow-200 text-inherit dark:bg-yellow-500/40">{{ piece.text }}</mark>
+            <template v-else>{{ piece.text }}</template>
+          </template>
         </h3>
         <Button
           v-if="!readonly"
@@ -69,6 +78,11 @@ function onClick(event) {
       <div v-if="labels.length" class="-mt-1 flex flex-wrap gap-1">
         <LabelPill v-for="label in labels" :key="label.id" :label="label" />
       </div>
+
+      <p v-if="matchInDescription" class="-mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+        <i class="pi pi-search text-[0.65rem]" aria-hidden="true" />
+        Match in description
+      </p>
 
       <!-- Sanitized in renderMarkdown. -->
       <div v-if="descriptionHtml" class="markdown line-clamp-3" v-html="descriptionHtml" />
