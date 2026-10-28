@@ -10,7 +10,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { useBoardStore } from '@/stores/board'
 import TaskCard from '@/components/TaskCard.vue'
-import TaskFormDialog from '@/components/TaskFormDialog.vue'
+import TaskDialog from '@/components/TaskDialog.vue'
 import ColumnDialog from '@/components/ColumnDialog.vue'
 import ColumnDeleteDialog from '@/components/ColumnDeleteDialog.vue'
 import BoardList from '@/components/BoardList.vue'
@@ -219,6 +219,7 @@ async function onColumnDragEnd(event) {
 const taskDialogVisible = ref(false)
 const editingTask = ref(null)
 const newTaskColumnId = ref(null)
+const taskDialogMode = ref('view')
 
 function openCreateTask(columnId) {
   editingTask.value = null
@@ -226,8 +227,9 @@ function openCreateTask(columnId) {
   taskDialogVisible.value = true
 }
 
-function openEditTask(task) {
+function openTask(task, mode = 'view') {
   editingTask.value = task
+  taskDialogMode.value = mode
   taskDialogVisible.value = true
 }
 
@@ -241,7 +243,7 @@ const taskMenuItems = computed(() => {
     .filter((c) => c.id !== task.columnId)
     .map((c) => ({ label: c.name, icon: 'pi pi-arrow-right', command: () => moveTaskTo(task, c.id) }))
   return [
-    { label: 'Edit', icon: 'pi pi-pencil', command: () => openEditTask(task) },
+    { label: 'Edit', icon: 'pi pi-pencil', command: () => openTask(task, 'edit') },
     ...(targets.length ? [{ label: 'Move to', items: targets }] : []),
     { separator: true },
     { label: 'Delete', icon: 'pi pi-trash', class: 'menu-danger', command: () => askDeleteTask(task) },
@@ -290,6 +292,12 @@ const deletingColumn = ref(null)
 function openAddColumn() {
   editingColumn.value = null
   columnDialogVisible.value = true
+}
+
+// New columns are added at the end, which can be off screen.
+async function showNewColumn(column) {
+  await nextTick()
+  scrollToColumn(column.id)
 }
 
 function openEditColumn(column) {
@@ -437,6 +445,15 @@ function askDeleteColumn(column) {
             outlined
             @click="shareDialogVisible = true"
           />
+          <!-- Small screens have the + in the column tabs instead. -->
+          <Button
+            v-if="!isMobile"
+            label="Add column"
+            icon="pi pi-objects-column"
+            severity="secondary"
+            outlined
+            @click="openAddColumn"
+          />
           <Button
             v-if="store.columns.length"
             :label="isMobile ? undefined : 'New task'"
@@ -503,7 +520,8 @@ function askDeleteColumn(column) {
           class="-mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pb-4 md:snap-none"
           @scroll.passive="updateActiveColumn"
         >
-          <div class="flex items-start gap-4">
+          <!-- w-max: as wide as the columns, so the scroller's right padding shows after the last one -->
+          <div class="flex w-max items-start gap-4">
             <VueDraggable
               v-model="store.columns"
               handle=".column-handle"
@@ -559,7 +577,7 @@ function askDeleteColumn(column) {
                     :color="column.color"
                     :leftColumn="neighbours(index).left"
                     :rightColumn="neighbours(index).right"
-                    @edit="openEditTask"
+                    @open="openTask"
                     @menu="showTaskMenu"
                     @move="moveTaskTo"
                   />
@@ -576,23 +594,19 @@ function askDeleteColumn(column) {
                 />
               </div>
             </VueDraggable>
-
-            <button
-              type="button"
-              class="flex h-12 w-[calc(100vw-2rem)] shrink-0 snap-start items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-500 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-300 md:w-72"
-              @click="openAddColumn"
-            >
-              <i class="pi pi-plus text-xs" aria-hidden="true" />
-              Add column
-            </button>
           </div>
         </div>
       </template>
 
       <Menu ref="taskMenu" :model="taskMenuItems" popup />
       <Menu ref="columnMenu" :model="columnMenuItems" popup />
-      <TaskFormDialog v-model:visible="taskDialogVisible" :task="editingTask" :columnId="newTaskColumnId" />
-      <ColumnDialog v-model:visible="columnDialogVisible" :column="editingColumn" />
+      <TaskDialog
+        v-model:visible="taskDialogVisible"
+        :task="editingTask"
+        :initialMode="taskDialogMode"
+        :columnId="newTaskColumnId"
+      />
+      <ColumnDialog v-model:visible="columnDialogVisible" :column="editingColumn" @created="showNewColumn" />
       <ColumnDeleteDialog v-model:visible="deleteDialogVisible" :column="deletingColumn" />
       <BoardDialog v-model:visible="boardDialogVisible" />
       <ShareDialog v-model:visible="shareDialogVisible" :board="store.board" />

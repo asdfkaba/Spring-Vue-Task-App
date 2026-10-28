@@ -13,6 +13,7 @@ const MAX_NAME_LENGTH = 50
 const visible = defineModel('visible', { type: Boolean, default: false })
 // null = add a new column, otherwise the column to edit
 const props = defineProps({ column: { type: Object, default: null } })
+const emit = defineEmits(['created'])
 
 const store = useBoardStore()
 const toast = useToast()
@@ -42,7 +43,7 @@ async function save() {
     if (isEdit.value) {
       await store.updateColumn(props.column.id, { name, color: form.color })
     } else {
-      await store.addColumn(name, form.color)
+      emit('created', await store.addColumn(name, form.color))
     }
     visible.value = false
   } catch (err) {

@@ -16,7 +16,7 @@ const props = defineProps({
   leftColumn: { type: Object, default: null },
   rightColumn: { type: Object, default: null },
 })
-const emit = defineEmits(['edit', 'menu', 'move'])
+const emit = defineEmits(['open', 'menu', 'move'])
 
 const priority = computed(() => priorityOf(props.task.priority))
 const due = computed(() => fromApi(props.task.due_date))
@@ -24,10 +24,10 @@ const isOverdue = computed(() => due.value !== null && due.value < new Date())
 const showArrows = computed(() => !props.readonly && (props.leftColumn || props.rightColumn))
 const descriptionHtml = computed(() => renderMarkdown(props.task.description))
 
-// A click on a link in the description follows the link instead of opening the editor.
+// A click on a link in the description follows the link instead of opening the task.
 function onClick(event) {
   if (props.readonly || event.target.closest('a')) return
-  emit('edit', props.task)
+  emit('open', props.task)
 }
 </script>
 
@@ -38,7 +38,7 @@ function onClick(event) {
     :tabindex="readonly ? undefined : 0"
     :data-task-id="task.id"
     @click="onClick"
-    @keydown.enter.self="!readonly && emit('edit', task)"
+    @keydown.enter.self="!readonly && emit('open', task)"
   >
     <div class="absolute inset-y-0 left-0 w-1.5" :style="{ backgroundColor: color ?? DEFAULT_COLUMN_COLOR }" />
 
