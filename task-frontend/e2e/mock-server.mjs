@@ -28,6 +28,7 @@ let share // { key, created }
 let shareRequests
 const newKey = () => Array.from({ length: 22 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'[Math.floor(Math.random() * 64)]).join('')
 let tasks
+let notes // [{ id, taskId, text, user, created, edited }]
 let log
 
 function reset() {
@@ -47,6 +48,7 @@ function reset() {
     { id: 2, title: 'Task B', description: null, due_date: [2026, 1, 1, 12, 0], created: null, edited: null, columnId: 10, position: 1 },
     { id: 3, title: 'Task C', description: null, due_date: null, created: '2026-08-01T10:00:00', edited: null, columnId: 11, position: 0 },
   ]
+  notes = []
   log = []
 }
 reset()
@@ -139,6 +141,36 @@ function api(method, url, body) {
     renumber(target)
     return [200, t]
   }
+  if ((m = p.match(/^\/tasks\/(\d+)\/notes$/))) {
+    const taskId = +m[1]
+    if (!tasks.some((t) => t.id === taskId)) return [404, {}]
+    if (method === 'GET') {
+      return [200, notes.filter((n) => n.taskId === taskId).sort((a, b) => b.id - a.id).map(({ taskId, ...n }) => n)]
+    }
+    if (method === 'POST') {
+      const text = (body.text ?? '').trim()
+      if (!text || text.length > 5000) return [400, {}]
+      const note = { id: nextId++, taskId, text, user: 'Alice', created: localNow(), edited: null }
+      notes.push(note)
+      const { taskId: _, ...out } = note
+      return [201, out]
+    }
+  }
+  if ((m = p.match(/^\/notes\/(\d+)$/))) {
+    const note = notes.find((n) => n.id === +m[1])
+    if (!note) return [404, {}]
+    if (method === 'PATCH') {
+      const text = (body.text ?? '').trim()
+      if (!text || text.length > 5000) return [400, {}]
+      if (text !== note.text) Object.assign(note, { text, edited: localNow() })
+      const { taskId: _, ...out } = note
+      return [200, out]
+    }
+    if (method === 'DELETE') {
+      notes = notes.filter((n) => n !== note)
+      return [204, null]
+    }
+  }
   if ((m = p.match(/^\/tasks\/(\d+)\/history$/)) && method === 'GET') {
     return [200, events.filter((e) => e.taskId === +m[1]).map(({ taskId, ...e }) => e)]
   }
@@ -203,7 +235,7 @@ http.createServer((req, res) => {
       }
       if (req.url === '/api/__state') {
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ share, shareRequests, columns: sortedColumns(), labels, tasks: sortedColumns().flatMap((c) => inColumn(c.id)), log }))
+        res.end(JSON.stringify({ share, shareRequests, notes, columns: sortedColumns(), labels, tasks: sortedColumns().flatMap((c) => inColumn(c.id)), log }))
         return
       }
       if (req.method !== 'GET') log.push({ method: req.method, url: req.url, body })

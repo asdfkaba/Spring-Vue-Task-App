@@ -15,6 +15,7 @@ import LabelPicker from '@/components/LabelPicker.vue'
 import LabelPill from '@/components/LabelPill.vue'
 import TaskDetails from '@/components/TaskDetails.vue'
 import TaskHistory from '@/components/TaskHistory.vue'
+import TaskNotes from '@/components/TaskNotes.vue'
 
 // Shows a task (view) and edits or creates it (edit) in one dialog.
 
@@ -202,6 +203,7 @@ async function save() {
 
     <div v-if="mode === 'view' && current" class="flex flex-col gap-4">
       <TaskDetails :task="current" :column="column" :labels="labels" canEdit @edit="startEditing" />
+      <TaskNotes :taskId="current.id" />
       <TaskHistory :task="current" />
     </div>
 

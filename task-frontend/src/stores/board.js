@@ -199,6 +199,24 @@ export const useBoardStore = defineStore('board', {
       return (await expectOk(await authFetch(`/api/tasks/${id}/history`), 'Loading history')).json()
     },
 
+    // ---- Notes (plain text, newest first: [{ id, text, user, created, edited }]) ----
+
+    async fetchNotes(taskId) {
+      return (await expectOk(await authFetch(`/api/tasks/${taskId}/notes`), 'Loading notes')).json()
+    },
+
+    async addNote(taskId, text) {
+      return (await expectOk(await sendJson(`/api/tasks/${taskId}/notes`, 'POST', { text }), 'Adding note')).json()
+    },
+
+    async updateNote(id, text) {
+      return (await expectOk(await sendJson(`/api/notes/${id}`, 'PATCH', { text }), 'Saving note')).json()
+    },
+
+    async deleteNote(id) {
+      await expectOk(await authFetch(`/api/notes/${id}`, { method: 'DELETE' }), 'Deleting note')
+    },
+
     // ---- Labels ----
 
     async addLabel(name, color) {

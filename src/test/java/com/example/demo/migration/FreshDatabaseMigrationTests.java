@@ -45,7 +45,7 @@ class FreshDatabaseMigrationTests {
     void allMigrationsRunFromScratch() {
         List<String> applied = jdbc.queryForList(
                 "select version from flyway_schema_history where success order by installed_rank", String.class);
-        assertThat(applied).startsWith("1", "2");
+        assertThat(applied).startsWith("1", "2", "3");
         assertThat(jdbc.queryForObject(
                 "select count(*) from flyway_schema_history where type = 'BASELINE'", Integer.class)).isZero();
     }
@@ -55,5 +55,19 @@ class FreshDatabaseMigrationTests {
         Board board = boardService.createDefaultBoard(userRepository.save(new User("Alice", "alice@example.com", null)));
         assertThat(board.getId()).isNotNull();
         assertThat(boardService.getBoard(board.getId(), "alice@example.com").columns()).hasSize(3);
+    }
+
+    // V3 deletes notes in the database when their task is deleted; checked on PostgreSQL itself.
+    @Test
+    void deletingATaskDeletesItsNotesInTheDatabase() {
+        Board board = boardService.createDefaultBoard(userRepository.save(new User("Bob", "bob@example.com", null)));
+        Integer column = jdbc.queryForObject("select min(id) from board_column where board_id = ?", Integer.class, board.getId());
+        Integer task = jdbc.queryForObject(
+                "insert into task (title, position, board_column_id) values ('T', 0, ?) returning id", Integer.class, column);
+        jdbc.update("insert into task_note (task_id, text, created) values (?, 'note', now())", task);
+
+        jdbc.update("delete from task where id = ?", task);
+
+        assertThat(jdbc.queryForObject("select count(*) from task_note", Integer.class)).isZero();
     }
 }
