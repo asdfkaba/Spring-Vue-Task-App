@@ -16,6 +16,7 @@ import { renderMarkdown } from '@/utils/markdown'
 import LabelPicker from '@/components/LabelPicker.vue'
 import LabelPill from '@/components/LabelPill.vue'
 import TaskDetails from '@/components/TaskDetails.vue'
+import TaskHistory from '@/components/TaskHistory.vue'
 
 // Shows a task (view) and edits or creates it (edit) in one dialog.
 
@@ -200,14 +201,10 @@ async function save() {
       </div>
     </template>
 
-    <TaskDetails
-      v-if="mode === 'view' && current"
-      :task="current"
-      :column="column"
-      :labels="labels"
-      canEdit
-      @edit="startEditing"
-    />
+    <div v-if="mode === 'view' && current" class="flex flex-col gap-4">
+      <TaskDetails :task="current" :column="column" :labels="labels" canEdit @edit="startEditing" />
+      <TaskHistory :task="current" />
+    </div>
 
     <!-- Edit / create -->
     <form v-else id="task-form" class="flex flex-col gap-5 pt-1" @submit.prevent="save">

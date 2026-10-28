@@ -9,6 +9,7 @@ import com.example.demo.board.LabelService;
 import com.example.demo.config.WebSecurityConfig;
 import com.example.demo.task.Task;
 import com.example.demo.task.TaskController;
+import com.example.demo.task.TaskHistoryService;
 import com.example.demo.task.TaskRepository;
 import com.example.demo.user.CustomUserDetailsService;
 import com.example.demo.user.User;
@@ -62,6 +63,9 @@ class TaskControllerTests {
 
     @MockBean
     LabelService labelService;
+
+    @MockBean
+    TaskHistoryService historyService;
 
     private BoardColumn aliceColumn() {
         BoardColumn column = new BoardColumn("To do", null, 0, new Board("My board", new User("Alice", ALICE, null)));
@@ -304,5 +308,27 @@ class TaskControllerTests {
                         .content("{\"title\":\"T\",\"labelIds\":[99]}"))
                 .andExpect(status().isBadRequest());
         verify(taskRepository, never()).save(any());
+    }
+
+    @Test
+    void updateRecordsHistory() throws Exception {
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(aliceTask()));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        mockMvc.perform(put("/tasks/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"New title\"}"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<TaskHistoryService.Snapshot> before = ArgumentCaptor.forClass(TaskHistoryService.Snapshot.class);
+        verify(historyService).recordUpdate(before.capture(), any(Task.class), eq(ALICE));
+        assertThat(before.getValue().title()).isEqualTo("Old title");
+    }
+
+    @Test
+    void historyOfOtherUsersTaskIsNotFound() throws Exception {
+        when(taskRepository.findByIdAndUserEmail(5, ALICE)).thenReturn(Optional.empty());
+        mockMvc.perform(get("/tasks/5/history")).andExpect(status().isNotFound());
+        verifyNoInteractions(historyService);
     }
 }

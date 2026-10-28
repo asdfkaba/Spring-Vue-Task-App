@@ -6,6 +6,7 @@ import com.example.demo.board.BoardDtos.ColumnPatch;
 import com.example.demo.board.BoardDtos.LabelDto;
 import com.example.demo.task.Task;
 import com.example.demo.task.TaskDto;
+import com.example.demo.task.TaskHistoryService;
 import com.example.demo.task.TaskRepository;
 import com.example.demo.user.User;
 import com.example.demo.user.UserRepository;
@@ -43,16 +44,19 @@ public class BoardService {
     private final UserRepository userRepository;
     private final BoardShareRepository shareRepository;
     private final BoardLabelRepository labelRepository;
+    private final TaskHistoryService historyService;
 
     public BoardService(BoardRepository boardRepository, BoardColumnRepository columnRepository,
                         TaskRepository taskRepository, UserRepository userRepository,
-                        BoardShareRepository shareRepository, BoardLabelRepository labelRepository) {
+                        BoardShareRepository shareRepository, BoardLabelRepository labelRepository,
+                        TaskHistoryService historyService) {
         this.boardRepository = boardRepository;
         this.columnRepository = columnRepository;
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
         this.shareRepository = shareRepository;
         this.labelRepository = labelRepository;
+        this.historyService = historyService;
     }
 
     // The board every new user starts with.
@@ -73,6 +77,7 @@ public class BoardService {
     public void deleteBoard(int boardId, String email) {
         Board board = findOwnBoard(boardId, email);
         shareRepository.deleteByBoard(board);
+        historyService.forgetBoard(board);
         // Deleting the tasks also clears their rows in task_label.
         taskRepository.deleteAll(taskRepository.findByBoardInOrder(board));
         labelRepository.deleteAll(labelRepository.findByBoardOrderById(board));
@@ -203,8 +208,10 @@ public class BoardService {
                 for (Task task : tasks) {
                     task.setBoardColumn(target);
                     task.setPosition(next++);
+                    historyService.recordMove(task, column, target, email);
                 }
             } else if (deleteTasks) {
+                tasks.forEach(task -> historyService.recordDeleted(task, email));
                 taskRepository.deleteAll(tasks);
             } else {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -242,6 +249,7 @@ public class BoardService {
         int index = Math.max(0, Math.min(position, targetTasks.size()));
         targetTasks.add(index, task);
         task.setBoardColumn(target);
+        historyService.recordMove(task, source, target, email);
 
         renumber(sourceTasks);
         if (!sameColumn) {

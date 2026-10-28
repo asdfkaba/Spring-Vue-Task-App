@@ -29,13 +29,15 @@ public class TaskController {
     private final UserRepository userRepository;
     private final BoardService boardService;
     private final LabelService labelService;
+    private final TaskHistoryService historyService;
 
     public TaskController(TaskRepository repository, UserRepository userRepository, BoardService boardService,
-                          LabelService labelService) {
+                          LabelService labelService, TaskHistoryService historyService) {
         this.repository = repository;
         this.userRepository = userRepository;
         this.boardService = boardService;
         this.labelService = labelService;
+        this.historyService = historyService;
     }
 
     @GetMapping("")
@@ -69,6 +71,7 @@ public class TaskController {
         applyLabels(input, task);
         task.setPosition(repository.countByBoardColumn(column));
         repository.save(task);
+        historyService.recordCreated(task, email);
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -80,9 +83,12 @@ public class TaskController {
     @PutMapping("/{id}")
     public TaskDto updateTask(@PathVariable("id") int id, @RequestBody TaskRequest input) {
         Task task = findOwnTask(id);
+        TaskHistoryService.Snapshot before = TaskHistoryService.Snapshot.of(task);
         copyEditableFields(input, task);
         applyLabels(input, task);
-        return TaskDto.from(repository.save(task));
+        Task saved = repository.save(task);
+        historyService.recordUpdate(before, saved, currentUserEmail());
+        return TaskDto.from(saved);
     }
 
     @PatchMapping("/{id}/move")
@@ -95,7 +101,15 @@ public class TaskController {
 
     @DeleteMapping("/{id}/delete")
     public void deleteTask(@PathVariable("id") int id) {
-        repository.delete(findOwnTask(id));
+        Task task = findOwnTask(id);
+        historyService.recordDeleted(task, currentUserEmail());
+        repository.delete(task);
+    }
+
+    // Newest first. Only for the owner; shared boards don't show history.
+    @GetMapping("/{id}/history")
+    public List<TaskHistoryService.EventDto> getHistory(@PathVariable("id") int id) {
+        return historyService.historyOf(findOwnTask(id));
     }
 
     // Tasks of other users are reported as "not found" so their ids don't leak.
