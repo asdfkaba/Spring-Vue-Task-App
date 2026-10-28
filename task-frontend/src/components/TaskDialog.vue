@@ -4,14 +4,12 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import DatePicker from 'primevue/datepicker'
-import SelectButton from 'primevue/selectbutton'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { useBoardStore } from '@/stores/board'
 import { fromApi, toApi } from '@/utils/date'
-import { PRIORITY_OPTIONS } from '@/utils/task'
 import { renderMarkdown } from '@/utils/markdown'
 import LabelPicker from '@/components/LabelPicker.vue'
 import LabelPill from '@/components/LabelPill.vue'
@@ -49,7 +47,7 @@ const labels = computed(() => (current.value ? store.labelsOf(current.value) : [
 
 const busy = ref(false)
 const submitted = ref(false)
-const form = reactive({ title: '', description: '', dueDate: null, priority: 2, labelIds: [] })
+const form = reactive({ title: '', description: '', dueDate: null, labelIds: [] })
 const labelPickerOpen = ref(false)
 const formLabels = computed(() => store.labels.filter((l) => form.labelIds.includes(l.id)))
 let initialForm = ''
@@ -71,7 +69,6 @@ function fillForm() {
   form.title = t?.title ?? ''
   form.description = t?.description ?? ''
   form.dueDate = fromApi(t?.due_date)
-  form.priority = t?.priority ? Number(t.priority) : 2
   form.labelIds = [...(t?.labelIds ?? [])].sort((a, b) => a - b)
   labelPickerOpen.value = false
   initialForm = JSON.stringify(form)
@@ -140,7 +137,6 @@ async function save() {
     title: form.title.trim(),
     description: form.description.trim(),
     due_date: toApi(form.dueDate),
-    priority: form.priority,
     labelIds: form.labelIds,
   }
 
@@ -328,17 +324,6 @@ async function save() {
         />
       </div>
 
-      <div class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Priority</span>
-        <SelectButton
-          v-model="form.priority"
-          :options="PRIORITY_OPTIONS"
-          optionLabel="label"
-          optionValue="value"
-          :allowEmpty="false"
-          fluid
-        />
-      </div>
     </form>
 
     <template #footer>

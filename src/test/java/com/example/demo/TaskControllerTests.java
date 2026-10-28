@@ -75,7 +75,7 @@ class TaskControllerTests {
 
     private Task aliceTask() {
         User alice = new User("Alice", ALICE, null);
-        Task task = new Task("Old title", LocalDateTime.of(2026, 10, 27, 12, 0), null, "Old description", 1);
+        Task task = new Task("Old title", LocalDateTime.of(2026, 10, 27, 12, 0), null, "Old description");
         task.setId(1);
         task.setCreated(LocalDateTime.of(2026, 10, 1, 9, 0));
         task.setUser(alice);
@@ -92,7 +92,7 @@ class TaskControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"title":"New title","description":"New description",
-                                 "due_date":"2026-11-02T09:30:00","priority":3,"status":"DONE",
+                                 "due_date":"2026-11-02T09:30:00","status":"DONE",
                                  "created":null,"columnId":99}
                                 """))
                 .andExpect(status().isOk())
@@ -104,7 +104,6 @@ class TaskControllerTests {
         assertThat(saved.getValue().getDue_date()).isEqualTo(LocalDateTime.of(2026, 11, 2, 9, 30));
         // PUT does not move tasks; that is what /move is for.
         assertThat(saved.getValue().getBoardColumn().getId()).isEqualTo(10);
-        assertThat(saved.getValue().getPriority()).isEqualTo(3);
         assertThat(saved.getValue().getCreated()).isEqualTo(LocalDateTime.of(2026, 10, 1, 9, 0));
         assertThat(saved.getValue().getUser().getEmail()).isEqualTo(ALICE);
     }
@@ -205,7 +204,7 @@ class TaskControllerTests {
 
         mockMvc.perform(post("/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"id\":2,\"title\":\"New task\",\"priority\":2,\"columnId\":10}"))
+                        .content("{\"id\":2,\"title\":\"New task\",\"columnId\":10}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.columnId").value(10))
                 .andExpect(jsonPath("$.position").value(2));

@@ -58,7 +58,6 @@ class TaskHistoryServiceTests {
     private Task addTask(String title, BoardColumn column) {
         Task task = new Task();
         task.setTitle(title);
-        task.setPriority(2);
         task.setUser(board.getUser());
         task.setBoardColumn(column);
         task.setPosition(taskRepository.countByBoardColumn(column));

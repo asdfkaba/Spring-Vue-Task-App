@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue'
 import { format, formatDistanceToNow } from 'date-fns'
 import { useBoardStore } from '@/stores/board'
 import { formatDue, fromApi } from '@/utils/date'
-import { priorityOf } from '@/utils/task'
 import { lineDiff } from '@/utils/diff'
 
 // The task's change history, collapsed until opened. Only for the owner; shared boards don't show it.
@@ -39,8 +38,9 @@ watch(
 )
 
 // Tasks from before the history existed have no "created" event; show their creation date instead.
+// Events whose changes no longer exist as fields (old priority changes) have nothing to say and are left out.
 const entries = computed(() => {
-  const list = [...events.value]
+  const list = events.value.filter((e) => lines(e).length > 0)
   const created = fromApi(props.task.created)
   if (status.value === 'ok' && created && !list.some((e) => e.type === 'created')) {
     list.push({ id: 'created', type: 'created', at: props.task.created, user: null, changes: {} })
@@ -48,7 +48,6 @@ const entries = computed(() => {
   return list
 })
 
-const priorityName = (value) => priorityOf(value)?.label ?? 'none'
 const dueText = (value) => formatDue(fromApi(value))
 const quoted = (text) => `“${text}”`
 const names = (list) => list.join(', ')
@@ -73,7 +72,6 @@ function lines(event) {
           : `Changed the due date from ${dueText(before)} to ${dueText(after)}`,
     )
   }
-  if (c.priority) out.push(`Changed priority from ${priorityName(c.priority[0])} to ${priorityName(c.priority[1])}`)
   if (c.labelsAdded) out.push(`Added ${c.labelsAdded.length === 1 ? 'label' : 'labels'} ${names(c.labelsAdded)}`)
   if (c.labelsRemoved) out.push(`Removed ${c.labelsRemoved.length === 1 ? 'label' : 'labels'} ${names(c.labelsRemoved)}`)
   return out

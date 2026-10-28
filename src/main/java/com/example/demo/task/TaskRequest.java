@@ -12,7 +12,6 @@ public record TaskRequest(
         String title,
         String description,
         LocalDateTime due_date,
-        Integer priority,
         Integer columnId,
         List<Integer> labelIds) {
 }

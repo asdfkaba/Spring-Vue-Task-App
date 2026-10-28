@@ -1,9 +1,8 @@
 <script setup>
 import { computed } from 'vue'
-import Tag from 'primevue/tag'
 import LabelPill from '@/components/LabelPill.vue'
 import { formatDue, formatShort, fromApi } from '@/utils/date'
-import { DEFAULT_COLUMN_COLOR, priorityOf } from '@/utils/task'
+import { DEFAULT_COLUMN_COLOR } from '@/utils/task'
 import { renderMarkdown } from '@/utils/markdown'
 
 // Everything about a task, read-only. Used by the task dialog and on shared boards.
@@ -16,7 +15,6 @@ const props = defineProps({
 })
 const emit = defineEmits(['edit'])
 
-const priority = computed(() => priorityOf(props.task.priority))
 const due = computed(() => fromApi(props.task.due_date))
 const isOverdue = computed(() => due.value !== null && due.value < new Date())
 const created = computed(() => fromApi(props.task.created))
@@ -37,12 +35,6 @@ const descriptionHtml = computed(() => renderMarkdown(props.task.description))
         />
         {{ column.name }}
       </span>
-      <Tag
-        v-if="priority"
-        :value="priority.label"
-        :severity="priority.severity"
-        :class="{ 'dark:bg-slate-700': priority.severity === 'secondary' }"
-      />
       <span v-if="labels.length" class="flex flex-wrap gap-1" aria-label="Labels">
         <LabelPill v-for="label in labels" :key="label.id" :label="label" />
       </span>

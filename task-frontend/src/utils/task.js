@@ -1,13 +1,3 @@
-export const PRIORITY_OPTIONS = [
-  { label: 'Low', value: 1, severity: 'secondary' },
-  { label: 'Medium', value: 2, severity: 'warn' },
-  { label: 'High', value: 3, severity: 'danger' },
-]
-
-export function priorityOf(value) {
-  return PRIORITY_OPTIONS.find((p) => p.value === Number(value)) ?? null
-}
-
 // Used for tasks in a column without its own color.
 export const DEFAULT_COLUMN_COLOR = '#cbd5e1'
 

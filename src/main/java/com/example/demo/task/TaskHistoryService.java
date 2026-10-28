@@ -34,11 +34,10 @@ public class TaskHistoryService {
     }
 
     /** The fields whose changes are recorded. Labels by name, sorted. */
-    public record Snapshot(String title, String description, LocalDateTime dueDate, Integer priority,
-                           List<String> labels) {
+    public record Snapshot(String title, String description, LocalDateTime dueDate, List<String> labels) {
         public static Snapshot of(Task task) {
             List<String> labels = task.getLabels().stream().map(BoardLabel::getName).sorted().toList();
-            return new Snapshot(task.getTitle(), task.getDescription(), task.getDue_date(), task.getPriority(), labels);
+            return new Snapshot(task.getTitle(), task.getDescription(), task.getDue_date(), labels);
         }
     }
 
@@ -60,7 +59,6 @@ public class TaskHistoryService {
         putIfChanged(changes, "title", before.title(), after.title());
         putIfChanged(changes, "description", before.description(), after.description());
         putIfChanged(changes, "due_date", iso(before.dueDate()), iso(after.dueDate()));
-        putIfChanged(changes, "priority", before.priority(), after.priority());
         List<String> added = new ArrayList<>(after.labels());
         added.removeAll(before.labels());
         List<String> removed = new ArrayList<>(before.labels());
