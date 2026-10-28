@@ -10,6 +10,8 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { useBoardStore } from '@/stores/board'
 import TaskCard from '@/components/TaskCard.vue'
+import BoardFilter from '@/components/BoardFilter.vue'
+import { useBoardFilter } from '@/composables/useBoardFilter'
 import TaskDialog from '@/components/TaskDialog.vue'
 import ColumnDialog from '@/components/ColumnDialog.vue'
 import ColumnDeleteDialog from '@/components/ColumnDeleteDialog.vue'
@@ -139,6 +141,35 @@ function askDeleteBoard(board) {
 // Matches Tailwind's md breakpoint (48rem).
 const mobileQuery = window.matchMedia('(max-width: 47.99rem)')
 const isMobile = ref(mobileQuery.matches)
+
+// ---- Search and label filter ----
+// Hidden cards stay in the draggable lists (v-show), so drag & drop keeps working on the full order.
+const {
+  text: filterText,
+  labelIds: filterLabelIds,
+  terms: filterTerms,
+  active: filterActive,
+  match: matchOf,
+  clear: clearFilter,
+} = useBoardFilter((task) => store.labelsOf(task))
+const filterBar = ref(null)
+const filterOpen = ref(false) // small screens: the search row is opened with the search button
+
+const visibleCount = (columnId) => (store.tasksByColumn[columnId] ?? []).filter((t) => matchOf(t).matches).length
+const matchingCount = computed(() => store.columns.reduce((sum, c) => sum + visibleCount(c.id), 0))
+// "3" without a filter, "1 / 3" with one.
+const countLabel = (columnId) => {
+  const total = (store.tasksByColumn[columnId] ?? []).length
+  return filterActive.value ? `${visibleCount(columnId)} / ${total}` : `${total}`
+}
+
+async function toggleFilterRow() {
+  filterOpen.value = !filterOpen.value
+  if (filterOpen.value) {
+    await nextTick()
+    filterBar.value?.focus()
+  }
+}
 const onMobileChange = (event) => (isMobile.value = event.matches)
 mobileQuery.addEventListener('change', onMobileChange)
 onBeforeUnmount(() => mobileQuery.removeEventListener('change', onMobileChange))
@@ -430,13 +461,25 @@ function askDeleteColumn(column) {
               {{ store.board?.name ?? 'Boards' }}
             </h1>
             <p v-if="store.loaded" class="hidden text-sm text-slate-500 dark:text-slate-400 md:block">
-              {{ store.taskCount }} {{ store.taskCount === 1 ? 'task' : 'tasks' }} ·
-              {{ store.columns.length }} {{ store.columns.length === 1 ? 'column' : 'columns' }}
+              <template v-if="filterActive">{{ matchingCount }} of {{ store.taskCount }} tasks match</template>
+              <template v-else>
+                {{ store.taskCount }} {{ store.taskCount === 1 ? 'task' : 'tasks' }} ·
+                {{ store.columns.length }} {{ store.columns.length === 1 ? 'column' : 'columns' }}
+              </template>
             </p>
           </div>
         </div>
         <!-- Icon-only buttons on small screens to keep the header in one line -->
         <div v-if="store.board" class="flex shrink-0 gap-2">
+          <Button
+            v-if="isMobile"
+            icon="pi pi-search"
+            aria-label="Search"
+            severity="secondary"
+            :outlined="!filterOpen && !filterActive"
+            :aria-expanded="filterOpen || filterActive"
+            @click="toggleFilterRow"
+          />
           <Button
             :label="isMobile ? undefined : 'Share'"
             aria-label="Share"
@@ -463,6 +506,17 @@ function askDeleteColumn(column) {
           />
         </div>
       </div>
+
+      <BoardFilter
+        v-if="store.loaded && (!isMobile || filterOpen || filterActive)"
+        ref="filterBar"
+        v-model:text="filterText"
+        v-model:labelIds="filterLabelIds"
+        :labels="store.labels"
+        :active="filterActive"
+        class="-mt-1 md:-mt-3"
+        @clear="clearFilter"
+      />
 
       <div
         v-if="store.boardsLoaded && store.boards.length === 0"
@@ -501,7 +555,7 @@ function askDeleteColumn(column) {
           >
             {{ column.name }}
             <span class="rounded-full bg-slate-200 dark:bg-slate-800 px-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
-              {{ store.tasksByColumn[column.id].length }}
+              {{ countLabel(column.id) }}
             </span>
           </button>
           <button
@@ -547,7 +601,7 @@ function askDeleteColumn(column) {
                   </button>
                   <h2 class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700 dark:text-slate-300">{{ column.name }}</h2>
                   <span class="rounded-full bg-white dark:bg-slate-800 px-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                    {{ store.tasksByColumn[column.id].length }}
+                    {{ countLabel(column.id) }}
                   </span>
                   <Button
                     icon="pi pi-ellipsis-h"
@@ -560,6 +614,12 @@ function askDeleteColumn(column) {
                   />
                 </header>
 
+                <p
+                  v-if="filterActive && visibleCount(column.id) === 0"
+                  class="px-4 pt-2 text-sm text-slate-400 dark:text-slate-500"
+                >
+                  No matches
+                </p>
                 <VueDraggable
                   v-model="store.tasksByColumn[column.id]"
                   group="tasks"
@@ -578,6 +638,9 @@ function askDeleteColumn(column) {
                     :labels="store.labelsOf(task)"
                     :leftColumn="neighbours(index).left"
                     :rightColumn="neighbours(index).right"
+                    v-show="matchOf(task).matches"
+                    :terms="filterTerms"
+                    :matchInDescription="matchOf(task).inDescription && !matchOf(task).inTitle"
                     @open="openTask"
                     @menu="showTaskMenu"
                     @move="moveTaskTo"
