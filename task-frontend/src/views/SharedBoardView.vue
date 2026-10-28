@@ -1,12 +1,16 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import TaskCard from '@/components/TaskCard.vue'
+import TaskDetails from '@/components/TaskDetails.vue'
 
 // Read-only board behind a share link. Works without login, so it uses plain fetch.
 const route = useRoute()
+const router = useRouter()
 
 const board = ref(null) // { name, columns, labels, tasks }
 const status = ref('loading') // 'loading' | 'ok' | 'not-found' | 'error'
@@ -29,6 +33,10 @@ async function load(token) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     board.value = await response.json()
     status.value = 'ok'
+    // Old links (plain token) or a renamed board: show the link's current form in the address bar.
+    if (board.value.path && board.value.path !== token) {
+      router.replace({ name: 'shared-board', params: { token: board.value.path } })
+    }
   } catch {
     status.value = 'error'
   }
@@ -36,7 +44,24 @@ async function load(token) {
 
 const labelsOf = (task) => (board.value?.labels ?? []).filter((l) => task.labelIds?.includes(l.id))
 
-watch(() => route.params.token, load, { immediate: true })
+// The task shown in the dialog; read-only, so there is no edit mode.
+const openTask = ref(null)
+const detailsVisible = ref(false)
+const openColumn = computed(() => board.value?.columns.find((c) => c.id === openTask.value?.columnId) ?? null)
+
+function showTask(task) {
+  openTask.value = task
+  detailsVisible.value = true
+}
+
+// Correcting the address (see load) must not load the board again.
+watch(
+  () => route.params.token,
+  (token) => {
+    if (token !== board.value?.path) load(token)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -88,11 +113,26 @@ watch(() => route.params.token, load, { immediate: true })
                 :color="column.color"
                 :labels="labelsOf(task)"
                 readonly
+                @open="showTask"
               />
             </div>
           </div>
         </div>
       </div>
     </template>
+
+    <Dialog
+      v-model:visible="detailsVisible"
+      modal
+      header="Task"
+      :style="{ width: '40rem' }"
+      :breakpoints="{ '640px': '95vw' }"
+      :draggable="false"
+    >
+      <TaskDetails v-if="openTask" :task="openTask" :column="openColumn" :labels="labelsOf(openTask)" />
+      <template #footer>
+        <Button label="Close" severity="secondary" text @click="detailsVisible = false" />
+      </template>
+    </Dialog>
   </section>
 </template>

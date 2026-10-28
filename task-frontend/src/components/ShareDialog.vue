@@ -16,12 +16,12 @@ const store = useBoardStore()
 const confirm = useConfirm()
 const toast = useToast()
 
-const share = ref(null) // { token, created } or null
+const share = ref(null) // { path, created } or null; path is "<board-slug>-<key>"
 const loading = ref(false)
 const busy = ref(false)
 const urlInput = ref()
 
-const url = computed(() => (share.value ? `${window.location.origin}/share/${share.value.token}` : ''))
+const url = computed(() => (share.value ? `${window.location.origin}/share/${share.value.path}` : ''))
 const created = computed(() => fromApi(share.value?.created))
 
 function showError(summary, err) {

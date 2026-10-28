@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Read-only share links. Only the owner can see, create or revoke a board's link;
@@ -42,22 +41,17 @@ public class BoardShareService {
         shareRepository.deleteByBoard(boardService.findOwnBoard(boardId, email));
     }
 
-    // Unknown, revoked and malformed tokens all answer 404, so nothing can be learned from the answer.
+    /**
+     * The board behind a link path (see {@link ShareLinks}). Unknown, revoked and malformed links
+     * all answer 404, so nothing can be learned from the answer.
+     */
     @Transactional(readOnly = true)
-    public SharedBoard sharedBoard(String token) {
-        Board board = parse(token)
+    public SharedBoard sharedBoard(String path) {
+        BoardShare share = ShareLinks.token(path)
                 .flatMap(shareRepository::findByToken)
-                .map(BoardShare::getBoard)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Share link not found"));
-        return new SharedBoard(board.getName(), boardService.columnsOf(board), boardService.labelsOf(board),
-                boardService.tasksOf(board));
-    }
-
-    private static Optional<UUID> parse(String token) {
-        try {
-            return Optional.of(UUID.fromString(token));
-        } catch (IllegalArgumentException e) {
-            return Optional.empty();
-        }
+        Board board = share.getBoard();
+        return new SharedBoard(board.getName(), ShareLinks.path(board.getSlug(), share.getToken()),
+                boardService.columnsOf(board), boardService.labelsOf(board), boardService.tasksOf(board));
     }
 }

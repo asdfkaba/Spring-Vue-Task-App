@@ -11,7 +11,7 @@ const props = defineProps({
   task: { type: Object, required: true },
   // Color of the column the task is in; the card shows it as a stripe.
   color: { type: String, default: null },
-  // Shared boards: no editing, no menu, and the full description.
+  // Shared boards: no menu, no move arrows, no dragging; a click still opens the task.
   readonly: { type: Boolean, default: false },
   // Neighbour columns ({ id, name }) for the move arrows, an alternative to drag & drop.
   leftColumn: { type: Object, default: null },
@@ -29,7 +29,7 @@ const descriptionHtml = computed(() => renderMarkdown(props.task.description))
 
 // A click on a link in the description follows the link instead of opening the task.
 function onClick(event) {
-  if (props.readonly || event.target.closest('a')) return
+  if (event.target.closest('a')) return
   emit('open', props.task)
 }
 </script>
@@ -37,11 +37,14 @@ function onClick(event) {
 <template>
   <article
     class="group relative flex flex-col overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm"
-    :class="readonly ? '' : 'cursor-grab transition hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-md active:cursor-grabbing'"
-    :tabindex="readonly ? undefined : 0"
+    :class="[
+      'transition hover:border-slate-300 hover:shadow-md dark:hover:border-slate-600',
+      readonly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
+    ]"
+    tabindex="0"
     :data-task-id="task.id"
     @click="onClick"
-    @keydown.enter.self="!readonly && emit('open', task)"
+    @keydown.enter.self="emit('open', task)"
   >
     <div class="absolute inset-y-0 left-0 w-1.5" :style="{ backgroundColor: color ?? DEFAULT_COLUMN_COLOR }" />
 
@@ -68,7 +71,7 @@ function onClick(event) {
       </div>
 
       <!-- Sanitized in renderMarkdown. -->
-      <div v-if="descriptionHtml" class="markdown" :class="{ 'line-clamp-3': !readonly }" v-html="descriptionHtml" />
+      <div v-if="descriptionHtml" class="markdown line-clamp-3" v-html="descriptionHtml" />
 
       <div v-if="priority || due || showArrows" class="flex flex-wrap items-center gap-2 text-xs">
         <!-- The gray "Low" tag has the card's color in dark mode, so it gets a lighter background. -->

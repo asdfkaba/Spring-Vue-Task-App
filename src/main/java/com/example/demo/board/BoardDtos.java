@@ -24,13 +24,16 @@ public final class BoardDtos {
     /**
      * What a share link shows. Kept separate from BoardDetail on purpose, so fields added
      * for the owner later don't become public by accident.
+     * path is the link's current form (slug of the board's name + key), so outdated links can be corrected.
      */
-    public record SharedBoard(String name, List<ColumnDto> columns, List<LabelDto> labels, List<TaskDto> tasks) {
+    public record SharedBoard(String name, String path, List<ColumnDto> columns, List<LabelDto> labels,
+                              List<TaskDto> tasks) {
     }
 
-    public record ShareDto(String token, LocalDateTime created) {
+    // path goes after /share/ in the link, e.g. "bewerbungen-E9ciaFkEQxu0EPNI3p7EFA".
+    public record ShareDto(String path, LocalDateTime created) {
         static ShareDto from(BoardShare share) {
-            return new ShareDto(share.getToken().toString(), share.getCreated());
+            return new ShareDto(ShareLinks.path(share.getBoard().getSlug(), share.getToken()), share.getCreated());
         }
     }
 
