@@ -44,7 +44,7 @@ public class TaskEvent {
     @Column(nullable = false, length = 20)
     private String type;
 
-    // JSON object, e.g. {"priority":[2,3],"labelsAdded":["Urgent"]}. Names, not ids, so it stays readable.
+    // JSON object, e.g. {"title":["Old","New"],"labelsAdded":["Urgent"]}. Names, not ids, so it stays readable.
     @Column(nullable = false, columnDefinition = "text")
     private String changes;
 

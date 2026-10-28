@@ -127,7 +127,6 @@ public class TaskController {
         to.setTitle(from.title());
         to.setDescription(from.description());
         to.setDue_date(from.due_date());
-        to.setPriority(from.priority());
     }
 
     // Only labels of the task's own board are accepted (checked in LabelService).

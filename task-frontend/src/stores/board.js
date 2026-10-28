@@ -152,7 +152,6 @@ export const useBoardStore = defineStore('board', {
         title: task.title,
         description: task.description,
         due_date: task.due_date,
-        priority: task.priority,
         labelIds: task.labelIds,
         ...changes,
       }

@@ -1,9 +1,8 @@
 <script setup>
 import { computed } from 'vue'
-import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import { fromApi, formatDue } from '@/utils/date'
-import { DEFAULT_COLUMN_COLOR, priorityOf } from '@/utils/task'
+import { DEFAULT_COLUMN_COLOR } from '@/utils/task'
 import { renderMarkdown } from '@/utils/markdown'
 import LabelPill from '@/components/LabelPill.vue'
 import { highlight } from '@/utils/search'
@@ -26,7 +25,6 @@ const props = defineProps({
 })
 const emit = defineEmits(['open', 'menu', 'move'])
 
-const priority = computed(() => priorityOf(props.task.priority))
 const due = computed(() => fromApi(props.task.due_date))
 const isOverdue = computed(() => due.value !== null && due.value < new Date())
 const showArrows = computed(() => !props.readonly && (props.leftColumn || props.rightColumn))
@@ -87,15 +85,7 @@ function onClick(event) {
       <!-- Sanitized in renderMarkdown. -->
       <div v-if="descriptionHtml" class="markdown line-clamp-3" v-html="descriptionHtml" />
 
-      <div v-if="priority || due || showArrows" class="flex flex-wrap items-center gap-2 text-xs">
-        <!-- The gray "Low" tag has the card's color in dark mode, so it gets a lighter background. -->
-        <Tag
-          v-if="priority"
-          :value="priority.label"
-          :severity="priority.severity"
-          class="!text-xs"
-          :class="{ 'dark:bg-slate-700': priority.severity === 'secondary' }"
-        />
+      <div v-if="due || showArrows" class="flex flex-wrap items-center gap-2 text-xs">
         <span
           v-if="due"
           class="flex items-center gap-1 font-medium"

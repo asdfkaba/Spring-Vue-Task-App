@@ -29,14 +29,12 @@ public class Task {
     // Markdown, rendered by the frontend. "text" because varchar(255) is too short.
     @Column(columnDefinition = "text")
     String description;
-    Integer priority;
 
-    public Task(String title, LocalDateTime due_date, LocalDateTime created, String description, Integer priority) {
+    public Task(String title, LocalDateTime due_date, LocalDateTime created, String description) {
         this.title = title;
         this.due_date = due_date;
         this.created = created;
         this.description = description;
-        this.priority = priority;
     }
 
     @ManyToOne(fetch = FetchType.LAZY)
