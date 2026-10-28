@@ -71,7 +71,7 @@ onMounted(async () => {
           <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white">
             <i class="pi pi-check-square" />
           </span>
-          Task App
+          Taskz
         </RouterLink>
 
         <div class="flex min-w-0 items-center gap-2">

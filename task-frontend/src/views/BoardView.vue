@@ -19,6 +19,7 @@ import BoardList from '@/components/BoardList.vue'
 import BoardDialog from '@/components/BoardDialog.vue'
 import BoardDeleteDialog from '@/components/BoardDeleteDialog.vue'
 import ShareDialog from '@/components/ShareDialog.vue'
+import { usePageTitle } from '@/utils/title'
 
 const store = useBoardStore()
 const route = useRoute()
@@ -251,6 +252,17 @@ const taskDialogVisible = ref(false)
 const editingTask = ref(null)
 const newTaskColumnId = ref(null)
 const taskDialogMode = ref('view')
+
+// Browser title: open task, then board, e.g. "Java Backend · Bewerbungen · Taskz".
+usePageTitle(() => {
+  if (store.boardsLoaded && store.boards.length === 0) return ['Boards']
+  const boardName = store.board?.name
+  if (!taskDialogVisible.value) return [boardName]
+  if (!editingTask.value) return ['New task', boardName]
+  // The store replaces a task object when it is saved, so read the current title.
+  const task = store.findTask(editingTask.value.id)?.task ?? editingTask.value
+  return [task.title, boardName]
+})
 
 function openCreateTask(columnId) {
   editingTask.value = null

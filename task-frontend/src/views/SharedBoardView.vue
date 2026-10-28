@@ -9,6 +9,7 @@ import TaskCard from '@/components/TaskCard.vue'
 import TaskDetails from '@/components/TaskDetails.vue'
 import BoardFilter from '@/components/BoardFilter.vue'
 import { useBoardFilter } from '@/composables/useBoardFilter'
+import { usePageTitle } from '@/utils/title'
 
 // Read-only board behind a share link. Works without login, so it uses plain fetch.
 const route = useRoute()
@@ -64,6 +65,15 @@ const countLabel = (columnId) => {
 const openTask = ref(null)
 const detailsVisible = ref(false)
 const openColumn = computed(() => board.value?.columns.find((c) => c.id === openTask.value?.columnId) ?? null)
+
+// Browser title, e.g. "Bewerbungen (read only) · Taskz", with the open task in front.
+usePageTitle(() => {
+  if (status.value === 'not-found') return ['Link not working']
+  if (status.value === 'error') return ['Could not load the board']
+  if (!board.value) return []
+  const boardTitle = `${board.value.name} (read only)`
+  return [detailsVisible.value ? openTask.value?.title : null, boardTitle]
+})
 
 function showTask(task) {
   openTask.value = task
