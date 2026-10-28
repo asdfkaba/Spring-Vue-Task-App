@@ -4,6 +4,7 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import { fromApi, formatDue } from '@/utils/date'
 import { DEFAULT_COLUMN_COLOR, priorityOf } from '@/utils/task'
+import { renderMarkdown } from '@/utils/markdown'
 
 const props = defineProps({
   task: { type: Object, required: true },
@@ -21,6 +22,13 @@ const priority = computed(() => priorityOf(props.task.priority))
 const due = computed(() => fromApi(props.task.due_date))
 const isOverdue = computed(() => due.value !== null && due.value < new Date())
 const showArrows = computed(() => !props.readonly && (props.leftColumn || props.rightColumn))
+const descriptionHtml = computed(() => renderMarkdown(props.task.description))
+
+// A click on a link in the description follows the link instead of opening the editor.
+function onClick(event) {
+  if (props.readonly || event.target.closest('a')) return
+  emit('edit', props.task)
+}
 </script>
 
 <template>
@@ -29,8 +37,8 @@ const showArrows = computed(() => !props.readonly && (props.leftColumn || props.
     :class="readonly ? '' : 'cursor-grab transition hover:border-slate-300 hover:shadow-md active:cursor-grabbing'"
     :tabindex="readonly ? undefined : 0"
     :data-task-id="task.id"
-    @click="!readonly && emit('edit', task)"
-    @keydown.enter="!readonly && emit('edit', task)"
+    @click="onClick"
+    @keydown.enter.self="!readonly && emit('edit', task)"
   >
     <div class="absolute inset-y-0 left-0 w-1.5" :style="{ backgroundColor: color ?? DEFAULT_COLUMN_COLOR }" />
 
@@ -52,13 +60,8 @@ const showArrows = computed(() => !props.readonly && (props.leftColumn || props.
         />
       </header>
 
-      <p
-        v-if="task.description"
-        class="text-sm whitespace-pre-line text-slate-600"
-        :class="{ 'line-clamp-3': !readonly }"
-      >
-        {{ task.description }}
-      </p>
+      <!-- Sanitized in renderMarkdown. -->
+      <div v-if="descriptionHtml" class="markdown" :class="{ 'line-clamp-3': !readonly }" v-html="descriptionHtml" />
 
       <div v-if="priority || due || showArrows" class="flex flex-wrap items-center gap-2 text-xs">
         <Tag v-if="priority" :value="priority.label" :severity="priority.severity" class="!text-xs" />
