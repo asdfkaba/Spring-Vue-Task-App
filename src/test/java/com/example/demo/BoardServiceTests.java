@@ -449,4 +449,14 @@ class BoardServiceTests {
     void boardDetailCarriesTheSlug() {
         assertThat(boardService.getBoard(board.getId(), ALICE).slug()).isEqualTo("my-board");
     }
+
+    @Test
+    void taskDescriptionIsNotLimitedTo255Characters() {
+        Task task = addTask("Long", todo);
+        String description = "a".repeat(5_000);
+        task.setDescription(description);
+        em.flush();
+        em.clear();
+        assertThat(taskRepository.findById(task.getId()).orElseThrow().getDescription()).isEqualTo(description);
+    }
 }

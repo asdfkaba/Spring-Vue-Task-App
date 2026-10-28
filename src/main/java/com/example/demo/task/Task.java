@@ -21,6 +21,8 @@ public class Task {
     LocalDateTime created;
     LocalDateTime edited;
 
+    // Markdown, rendered by the frontend. "text" because varchar(255) is too short.
+    @Column(columnDefinition = "text")
     String description;
     Integer priority;
 

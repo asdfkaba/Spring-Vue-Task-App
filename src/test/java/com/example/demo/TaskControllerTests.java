@@ -117,6 +117,35 @@ class TaskControllerTests {
     }
 
     @Test
+    void updateAcceptsLongMarkdownDescription() throws Exception {
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(aliceTask()));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+        String description = "- [ ] item\n".repeat(900); // 9900 chars, far over the old 255
+
+        mockMvc.perform(put("/tasks/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\",\"description\":" + jsonString(description) + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").value(description));
+    }
+
+    @Test
+    void updateRejectsTooLongDescription() throws Exception {
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(aliceTask()));
+        String description = "x".repeat(10_001);
+
+        mockMvc.perform(put("/tasks/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\",\"description\":" + jsonString(description) + "}"))
+                .andExpect(status().isBadRequest());
+        verify(taskRepository, never()).save(any());
+    }
+
+    private static String jsonString(String s) {
+        return "\"" + s.replace("\n", "\\n") + "\"";
+    }
+
+    @Test
     void cannotUpdateTaskOfOtherUser() throws Exception {
         when(taskRepository.findByIdAndUserEmail(2, ALICE)).thenReturn(Optional.empty());
 

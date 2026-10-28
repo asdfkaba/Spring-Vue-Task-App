@@ -11,6 +11,10 @@ import { useToast } from 'primevue/usetoast'
 import { useBoardStore } from '@/stores/board'
 import { fromApi, toApi } from '@/utils/date'
 import { PRIORITY_OPTIONS } from '@/utils/task'
+import { renderMarkdown } from '@/utils/markdown'
+
+// Same limit as the backend (TaskController.MAX_DESCRIPTION_LENGTH).
+const MAX_DESCRIPTION_LENGTH = 10000
 
 const visible = defineModel('visible', { type: Boolean, default: false })
 const props = defineProps({
@@ -36,10 +40,14 @@ const form = reactive({
 
 const titleMissing = computed(() => submitted.value && !form.title.trim())
 
+const descriptionMode = ref('write') // 'write' | 'preview'
+const previewHtml = computed(() => renderMarkdown(form.description))
+
 // Reset the form every time the dialog opens.
 watch(visible, (open) => {
   if (!open) return
   submitted.value = false
+  descriptionMode.value = 'write'
   const t = props.task
   form.title = t?.title ?? ''
   form.description = t?.description ?? ''
@@ -113,17 +121,47 @@ async function save() {
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <label for="task-description" class="text-sm font-medium text-slate-700">
-          Description <span class="font-normal text-slate-400">(optional)</span>
-        </label>
+        <div class="flex items-end justify-between gap-2">
+          <label for="task-description" class="text-sm font-medium text-slate-700">
+            Description <span class="font-normal text-slate-400">(optional)</span>
+          </label>
+          <div role="group" aria-label="Description mode" class="flex rounded-md bg-slate-100 p-0.5 text-xs">
+            <button
+              v-for="mode in ['write', 'preview']"
+              :key="mode"
+              type="button"
+              class="rounded px-2 py-0.5 font-medium capitalize"
+              :class="descriptionMode === mode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+              :aria-pressed="descriptionMode === mode"
+              @click="descriptionMode = mode"
+            >
+              {{ mode }}
+            </button>
+          </div>
+        </div>
         <Textarea
+          v-show="descriptionMode === 'write'"
           id="task-description"
           v-model="form.description"
-          rows="3"
+          rows="4"
           autoResize
+          :maxlength="MAX_DESCRIPTION_LENGTH"
           placeholder="Add some details…"
+          class="font-mono !text-sm"
           fluid
         />
+        <div
+          v-if="descriptionMode === 'preview'"
+          data-testid="description-preview"
+          class="max-h-80 min-h-24 overflow-y-auto rounded-md border border-slate-200 px-3 py-2"
+        >
+          <!-- Sanitized in renderMarkdown. -->
+          <div v-if="previewHtml" class="markdown" v-html="previewHtml" />
+          <p v-else class="text-sm text-slate-400">Nothing to preview</p>
+        </div>
+        <p class="text-xs text-slate-400">
+          Markdown supported: **bold**, *italic*, [links](https://…), lists, - [ ] checkboxes, `code`
+        </p>
       </div>
 
       <div class="flex flex-col gap-1.5">

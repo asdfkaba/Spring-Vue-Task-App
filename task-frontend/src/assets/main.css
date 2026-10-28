@@ -16,3 +16,56 @@
       sans-serif;
   }
 }
+
+/* Rendered Markdown of task descriptions (utils/markdown.js). Kept compact for cards. */
+@layer components {
+  .markdown {
+    @apply text-sm break-words text-slate-600;
+  }
+  .markdown > * + * {
+    @apply mt-1.5;
+  }
+  .markdown :is(h1, h2, h3, h4, h5, h6) {
+    @apply text-sm font-semibold text-slate-800;
+  }
+  .markdown a[href] {
+    @apply text-blue-600 underline underline-offset-2 hover:text-blue-700;
+  }
+  .markdown :is(ul, ol) {
+    @apply pl-5;
+  }
+  .markdown ul {
+    @apply list-disc;
+  }
+  .markdown ol {
+    @apply list-decimal;
+  }
+  /* Task lists: the checkbox replaces the bullet. */
+  .markdown li:has(> input[type='checkbox'], > p > input[type='checkbox']) {
+    @apply -ml-5 list-none;
+  }
+  .markdown input[type='checkbox'] {
+    @apply mr-1.5 align-[-0.125em];
+  }
+  .markdown code {
+    @apply rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.85em] text-slate-700;
+  }
+  .markdown pre {
+    @apply overflow-x-auto rounded bg-slate-100 p-2;
+  }
+  .markdown pre code {
+    @apply bg-transparent p-0;
+  }
+  .markdown blockquote {
+    @apply border-l-2 border-slate-300 pl-2 text-slate-500;
+  }
+  .markdown hr {
+    @apply border-slate-200;
+  }
+  .markdown table {
+    @apply block overflow-x-auto text-xs;
+  }
+  .markdown :is(th, td) {
+    @apply border border-slate-200 px-1.5 py-0.5;
+  }
+}

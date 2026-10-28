@@ -22,6 +22,7 @@ import java.util.List;
 public class TaskController {
 
     private static final Logger LOG = LoggerFactory.getLogger(TaskController.class);
+    static final int MAX_DESCRIPTION_LENGTH = 10_000;
 
     private final TaskRepository repository;
     private final UserRepository userRepository;
@@ -99,6 +100,10 @@ public class TaskController {
 
     // Only the editable fields are copied, so a client can't set id, owner, column or timestamps.
     private static void copyEditableFields(TaskRequest from, Task to) {
+        if (from.description() != null && from.description().length() > MAX_DESCRIPTION_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "description must be at most " + MAX_DESCRIPTION_LENGTH + " characters");
+        }
         to.setTitle(from.title());
         to.setDescription(from.description());
         to.setDue_date(from.due_date());
