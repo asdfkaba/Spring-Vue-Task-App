@@ -1,5 +1,8 @@
 // Searching tasks by text and labels. Ignores case and accents: "uber" finds "Über", "muller" finds "Müller".
 
+// Stands for "tasks without labels" in a label filter; real label ids start at 1.
+export const NO_LABEL = 0
+
 // One character in search form; may become two ("ß" -> "ss") or none (a lone combining accent).
 function foldChar(char) {
   return char
@@ -20,11 +23,14 @@ export function searchTerms(query) {
 
 /**
  * Does the task match? Every term must appear in the title, the description or a label name.
- * labelIds (if any) must share at least one label with the task.
+ * labelIds (if any): the task needs one of these labels, or no label at all if NO_LABEL is among them.
  * Returns { matches, inTitle, inDescription } so the card can say where the text was found.
  */
 export function matchTask(task, taskLabels, terms, labelIds = []) {
-  if (labelIds.length && !task.labelIds?.some((id) => labelIds.includes(id))) {
+  const taskLabelIds = task.labelIds ?? []
+  const labelMatch =
+    taskLabelIds.some((id) => labelIds.includes(id)) || (taskLabelIds.length === 0 && labelIds.includes(NO_LABEL))
+  if (labelIds.length && !labelMatch) {
     return { matches: false, inTitle: false, inDescription: false }
   }
   if (!terms.length) return { matches: true, inTitle: false, inDescription: false }

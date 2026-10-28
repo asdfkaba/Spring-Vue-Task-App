@@ -1,19 +1,23 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import InputText from 'primevue/inputtext'
 import MultiSelect from 'primevue/multiselect'
 import LabelPill from '@/components/LabelPill.vue'
+import { NO_LABEL } from '@/utils/search'
 
 // Search field and label filter above a board. "/" focuses the search, Esc clears it.
 const text = defineModel('text', { type: String, default: '' })
 const labelIds = defineModel('labelIds', { type: Array, default: () => [] })
-defineProps({
+const props = defineProps({
   labels: { type: Array, default: () => [] }, // the board's labels
   active: { type: Boolean, default: false },
 })
+
+// The board's labels plus "No label" for tasks without any.
+const labelOptions = computed(() => [{ id: NO_LABEL, name: 'No label' }, ...props.labels])
 const emit = defineEmits(['clear'])
 
 const input = ref()
@@ -60,7 +64,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     <MultiSelect
       v-if="labels.length"
       v-model="labelIds"
-      :options="labels"
+      :options="labelOptions"
       optionLabel="name"
       optionValue="id"
       placeholder="Labels"
@@ -71,7 +75,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       class="w-32 sm:w-40"
     >
       <template #option="{ option }">
-        <LabelPill :label="option" />
+        <span v-if="option.id === NO_LABEL" class="text-sm text-slate-500 italic dark:text-slate-400">No label</span>
+        <LabelPill v-else :label="option" />
       </template>
     </MultiSelect>
     <Button
