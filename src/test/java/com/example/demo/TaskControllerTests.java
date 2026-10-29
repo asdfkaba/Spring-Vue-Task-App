@@ -85,6 +85,50 @@ class TaskControllerTests {
     }
 
     @Test
+    void tickingACheckboxSavesAndRecordsIt() throws Exception {
+        Task task = aliceTask();
+        task.setDescription("- [ ] Cover letter\n- [ ] CV");
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(task));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        mockMvc.perform(patch("/tasks/1/checkbox")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"- [ ] Cover letter\\n- [x] CV\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").value("- [ ] Cover letter\n- [x] CV"));
+
+        verify(historyService).recordCheckbox(task, "CV", true, ALICE);
+        verify(historyService, never()).recordUpdate(any(), any(), any());
+    }
+
+    @Test
+    void checkboxRequestWithOtherChangesIsRejected() throws Exception {
+        Task task = aliceTask();
+        task.setDescription("- [ ] Cover letter\n- [ ] CV");
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(task));
+
+        // E.g. the description was edited in another tab in the meantime.
+        mockMvc.perform(patch("/tasks/1/checkbox")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"- [x] Cover letter\\n- [x] CV\"}"))
+                .andExpect(status().isConflict());
+
+        verify(taskRepository, never()).save(any());
+        verifyNoInteractions(historyService);
+        assertThat(task.getDescription()).isEqualTo("- [ ] Cover letter\n- [ ] CV");
+    }
+
+    @Test
+    void checkboxOfOtherUsersTaskIsNotFound() throws Exception {
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.empty());
+        mockMvc.perform(patch("/tasks/1/checkbox")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"- [x] CV\"}"))
+                .andExpect(status().isNotFound());
+        verify(taskRepository, never()).save(any());
+    }
+
+    @Test
     void updateChangesOwnTaskAndKeepsCreated() throws Exception {
         when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(aliceTask()));
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));

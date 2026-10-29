@@ -82,6 +82,12 @@ public class TaskHistoryService {
         }
     }
 
+    /** A checkbox in the description was ticked or unticked; recorded by its text, not as a description change. */
+    @Transactional
+    public void recordCheckbox(Task task, String item, boolean checked, String email) {
+        save(task, checked ? Type.CHECKED : Type.UNCHECKED, Map.of("item", item), email);
+    }
+
     @Transactional
     public void recordDeleted(Task task, String email) {
         save(task, Type.DELETED, Map.of("title", task.getTitle()), email);

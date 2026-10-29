@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 
 /**
- * One entry in a task's history: created, updated, moved or deleted, and what changed.
+ * One entry in a task's history: created, updated, moved, deleted or a checkbox ticked, and what changed.
  * task_id has no foreign key on purpose, so the history stays when the task is deleted.
  */
 @Entity
@@ -18,7 +18,7 @@ import java.time.Instant;
 @NoArgsConstructor
 public class TaskEvent {
 
-    public enum Type { CREATED, UPDATED, MOVED, DELETED }
+    public enum Type { CREATED, UPDATED, MOVED, DELETED, CHECKED, UNCHECKED }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

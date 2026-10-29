@@ -19,6 +19,7 @@ import BoardList from '@/components/BoardList.vue'
 import BoardDialog from '@/components/BoardDialog.vue'
 import BoardDeleteDialog from '@/components/BoardDeleteDialog.vue'
 import ShareDialog from '@/components/ShareDialog.vue'
+import TaskTemplateDialog from '@/components/TaskTemplateDialog.vue'
 import { usePageTitle } from '@/utils/title'
 
 const store = useBoardStore()
@@ -124,6 +125,7 @@ const drawerVisible = ref(false)
 
 const boardDialogVisible = ref(false)
 const shareDialogVisible = ref(false)
+const templateDialogVisible = ref(false)
 const deleteBoardVisible = ref(false)
 const deletingBoard = ref(null)
 
@@ -500,6 +502,14 @@ function askDeleteColumn(column) {
             outlined
             @click="shareDialogVisible = true"
           />
+          <Button
+            title="Task template"
+            aria-label="Task template"
+            icon="pi pi-file-edit"
+            severity="secondary"
+            outlined
+            @click="templateDialogVisible = true"
+          />
           <!-- Small screens have the + in the column tabs instead. -->
           <Button
             v-if="!isMobile"
@@ -686,6 +696,7 @@ function askDeleteColumn(column) {
       <ColumnDeleteDialog v-model:visible="deleteDialogVisible" :column="deletingColumn" />
       <BoardDialog v-model:visible="boardDialogVisible" />
       <ShareDialog v-model:visible="shareDialogVisible" :board="store.board" />
+      <TaskTemplateDialog v-model:visible="templateDialogVisible" />
       <BoardDeleteDialog v-model:visible="deleteBoardVisible" :board="deletingBoard" @deleted="onBoardDeleted" />
     </section>
   </div>

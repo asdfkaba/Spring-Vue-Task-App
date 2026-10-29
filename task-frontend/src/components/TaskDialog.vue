@@ -10,7 +10,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { useBoardStore } from '@/stores/board'
 import { fromApi, toApi } from '@/utils/date'
-import { renderMarkdown } from '@/utils/markdown'
+import { renderMarkdown, toggleCheckbox } from '@/utils/markdown'
 import LabelPicker from '@/components/LabelPicker.vue'
 import LabelPill from '@/components/LabelPill.vue'
 import TaskDetails from '@/components/TaskDetails.vue'
@@ -68,7 +68,8 @@ function fillForm() {
   submitted.value = false
   descriptionMode.value = 'write'
   form.title = t?.title ?? ''
-  form.description = t?.description ?? ''
+  // A new task starts with the board's template.
+  form.description = t ? (t.description ?? '') : (store.taskTemplate ?? '')
   form.dueDate = fromApi(t?.due_date)
   form.labelIds = [...(t?.labelIds ?? [])].sort((a, b) => a - b)
   labelPickerOpen.value = false
@@ -109,6 +110,30 @@ function switchMode(target) {
   if (target === mode.value) return
   if (target === 'edit') startEditing()
   else backToView()
+}
+
+// Ticking a checkbox in the view saves right away (only that one item changes).
+const checking = ref(false)
+async function onToggleCheckbox(index) {
+  const task = current.value
+  const description = toggleCheckbox(task.description ?? '', index)
+  if (description === null) {
+    toast.add({ severity: 'error', summary: 'Could not find that checkbox', life: 5000 })
+    return
+  }
+  checking.value = true
+  try {
+    await store.toggleCheckbox(task.id, description)
+  } catch (err) {
+    if (err.status === 409) {
+      toast.add({ severity: 'warn', summary: 'The task was changed elsewhere', detail: 'Loaded the current version.', life: 5000 })
+      await store.fetchBoard(store.board.id).catch(() => {})
+    } else {
+      toast.add({ severity: 'error', summary: 'Could not save the checkbox', detail: err.message, life: 5000 })
+    }
+  } finally {
+    checking.value = false
+  }
 }
 
 function cancel() {
@@ -202,7 +227,15 @@ async function save() {
     </template>
 
     <div v-if="mode === 'view' && current" class="flex flex-col gap-4">
-      <TaskDetails :task="current" :column="column" :labels="labels" canEdit @edit="startEditing" />
+      <TaskDetails
+        :task="current"
+        :column="column"
+        :labels="labels"
+        canEdit
+        :checking="checking"
+        @edit="startEditing"
+        @toggle-checkbox="onToggleCheckbox"
+      />
       <TaskNotes :taskId="current.id" />
       <TaskHistory :task="current" />
     </div>

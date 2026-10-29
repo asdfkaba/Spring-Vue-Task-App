@@ -61,6 +61,9 @@
   .markdown input[type='checkbox'] {
     @apply mr-1.5 align-[-0.125em];
   }
+  .markdown input[type='checkbox']:not(:disabled) {
+    @apply cursor-pointer;
+  }
   .markdown code {
     @apply rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.85em] text-slate-700 dark:bg-slate-700/60 dark:text-slate-200;
   }

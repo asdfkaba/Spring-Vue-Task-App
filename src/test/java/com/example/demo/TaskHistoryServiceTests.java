@@ -83,6 +83,16 @@ class TaskHistoryServiceTests {
     }
 
     @Test
+    void checkboxIsRecordedWithItsText() {
+        Task task = addTask("Apply", todo);
+        history.recordCheckbox(task, "Cover letter", true, ALICE);
+        history.recordCheckbox(task, "Cover letter", false, ALICE);
+        List<EventDto> events = historyOf(task);
+        assertThat(events).extracting(EventDto::type).containsExactly("unchecked", "checked", "created");
+        assertThat(events.get(0).changes()).isEqualTo(Map.of("item", "Cover letter"));
+    }
+
+    @Test
     void updateStoresOnlyChangedFieldsWithOldAndNewValue() {
         Task task = addTask("Old", todo);
         Snapshot before = Snapshot.of(task);
