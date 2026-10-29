@@ -1,13 +1,16 @@
 package com.example.demo.task;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Markdown task list items ("- [ ] Cover letter") in descriptions.
- * The frontend ticks a checkbox by sending the whole description with one item changed;
- * {@link #singleToggle} checks that nothing else changed and tells which item it was.
+ * The frontend ticks a checkbox by sending the whole description with the changed items
+ * (the clicked one, plus sub-items and parents that follow it); {@link #toggles} checks that
+ * nothing but checkboxes changed and lists them.
  */
 final class Checklists {
 
@@ -15,44 +18,53 @@ final class Checklists {
     private static final Pattern ITEM = Pattern.compile("^((?:[ \\t]*>)*[ \\t]*(?:[-*+]|\\d{1,9}[.)])[ \\t]+\\[)([ xX])(].*)$");
     private static final int MAX_ITEM_LENGTH = 200;
 
-    record Toggle(String item, boolean checked) {
+    /** One ticked or unticked item; line is 0-based. */
+    record Toggle(int line, String item, boolean checked) {
     }
 
     private Checklists() {
     }
 
-    /** The one checkbox that differs between the two texts, or empty if anything else differs too. */
-    static Optional<Toggle> singleToggle(String before, String after) {
+    /**
+     * The checkboxes that differ between the two texts, in line order. Empty if nothing changed
+     * or anything other than a checkbox changed.
+     */
+    static List<Toggle> toggles(String before, String after) {
         if (before == null || after == null) {
-            return Optional.empty();
+            return List.of();
         }
         String[] oldLines = before.split("\n", -1);
         String[] newLines = after.split("\n", -1);
         if (oldLines.length != newLines.length) {
-            return Optional.empty();
+            return List.of();
         }
-        Toggle toggle = null;
+        List<Toggle> toggles = new ArrayList<>();
         for (int i = 0; i < oldLines.length; i++) {
             if (oldLines[i].equals(newLines[i])) {
                 continue;
             }
-            if (toggle != null) {
-                return Optional.empty();
+            Optional<Toggle> toggle = toggle(i, oldLines[i], newLines[i]);
+            if (toggle.isEmpty()) {
+                return List.of();
             }
-            Matcher was = ITEM.matcher(oldLines[i]);
-            Matcher is = ITEM.matcher(newLines[i]);
-            if (!was.matches() || !is.matches()
-                    || !was.group(1).equals(is.group(1)) || !was.group(3).equals(is.group(3))) {
-                return Optional.empty();
-            }
-            boolean checkedBefore = !was.group(2).equals(" ");
-            boolean checkedAfter = !is.group(2).equals(" ");
-            if (checkedBefore == checkedAfter) {
-                return Optional.empty(); // only "x" -> "X"
-            }
-            toggle = new Toggle(itemText(is.group(3)), checkedAfter);
+            toggles.add(toggle.get());
         }
-        return Optional.ofNullable(toggle);
+        return toggles;
+    }
+
+    private static Optional<Toggle> toggle(int line, String before, String after) {
+        Matcher was = ITEM.matcher(before);
+        Matcher is = ITEM.matcher(after);
+        if (!was.matches() || !is.matches()
+                || !was.group(1).equals(is.group(1)) || !was.group(3).equals(is.group(3))) {
+            return Optional.empty();
+        }
+        boolean checkedBefore = !was.group(2).equals(" ");
+        boolean checkedAfter = !is.group(2).equals(" ");
+        if (checkedBefore == checkedAfter) {
+            return Optional.empty(); // only "x" -> "X"
+        }
+        return Optional.of(new Toggle(line, itemText(is.group(3)), checkedAfter));
     }
 
     private static String itemText(String rest) {

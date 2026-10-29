@@ -92,22 +92,35 @@ public class TaskController {
     }
 
     /**
-     * Ticks or unticks one checkbox of the description. The client sends the whole description with
-     * that one item changed; anything else (or a description changed in the meantime) is rejected.
+     * Ticks or unticks a checkbox of the description. The client sends the whole description with the
+     * clicked item (line, 0-based) changed, plus its sub-items and the parents that follow from it.
+     * Parents come before their sub-items in the text, so items above the clicked line are parents.
+     * Only checkboxes may change, all in the same direction; anything else (or a description changed
+     * in the meantime) is rejected.
      */
     @PatchMapping("/{id}/checkbox")
     public TaskDto toggleCheckbox(@PathVariable("id") int id, @RequestBody CheckboxRequest input) {
         Task task = findOwnTask(id);
-        Checklists.Toggle toggle = Checklists.singleToggle(task.getDescription(), input.description())
+        List<Checklists.Toggle> toggles = Checklists.toggles(task.getDescription(), input.description());
+        // Without a line (older clients) exactly one checkbox may change.
+        Checklists.Toggle clicked = toggles.stream()
+                .filter(t -> input.line() == null ? toggles.size() == 1 : t.line() == input.line())
+                .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                        "The description must differ in exactly one checkbox"));
+                        "The description must differ only in checkboxes, including the clicked one"));
+        if (toggles.stream().anyMatch(t -> t.checked() != clicked.checked())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "All changed checkboxes must change the same way");
+        }
+        List<String> parents = toggles.stream().filter(t -> t.line() < clicked.line()).map(Checklists.Toggle::item).toList();
+        int subItems = (int) toggles.stream().filter(t -> t.line() > clicked.line()).count();
+
         task.setDescription(input.description());
         Task saved = repository.save(task);
-        historyService.recordCheckbox(saved, toggle.item(), toggle.checked(), currentUserEmail());
+        historyService.recordCheckbox(saved, clicked.item(), clicked.checked(), parents, subItems, currentUserEmail());
         return TaskDto.from(saved);
     }
 
-    public record CheckboxRequest(String description) {
+    public record CheckboxRequest(String description, Integer line) {
     }
 
     @PatchMapping("/{id}/move")

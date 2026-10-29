@@ -82,10 +82,21 @@ public class TaskHistoryService {
         }
     }
 
-    /** A checkbox in the description was ticked or unticked; recorded by its text, not as a description change. */
+    /**
+     * A checkbox in the description was ticked or unticked; recorded by its text, not as a description change.
+     * parents: items that changed with it (completed or reopened); subItems: how many sub-items changed with it.
+     */
     @Transactional
-    public void recordCheckbox(Task task, String item, boolean checked, String email) {
-        save(task, checked ? Type.CHECKED : Type.UNCHECKED, Map.of("item", item), email);
+    public void recordCheckbox(Task task, String item, boolean checked, List<String> parents, int subItems, String email) {
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("item", item);
+        if (!parents.isEmpty()) {
+            changes.put("parents", parents);
+        }
+        if (subItems > 0) {
+            changes.put("subItems", subItems);
+        }
+        save(task, checked ? Type.CHECKED : Type.UNCHECKED, changes, email);
     }
 
     @Transactional

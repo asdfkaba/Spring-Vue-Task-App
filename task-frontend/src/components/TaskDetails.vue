@@ -15,7 +15,7 @@ const props = defineProps({
   // A checkbox click is being saved; further clicks wait.
   checking: { type: Boolean, default: false },
 })
-// toggle-checkbox: (index) of the clicked task list item, see utils/markdown toggleCheckbox()
+// toggle-checkbox: (index) of the clicked task list item, see utils/markdown applyCheckbox()
 const emit = defineEmits(['edit', 'toggle-checkbox'])
 
 const due = computed(() => fromApi(props.task.due_date))

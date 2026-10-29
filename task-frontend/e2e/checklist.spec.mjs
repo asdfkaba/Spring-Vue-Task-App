@@ -86,6 +86,51 @@ test('Checklists in descriptions', async ({ browser }) => {
     await page.screenshot({ path: `${test.info().outputDir}/cl-1-board.png` })
   })
 
+  await test.step('nested items are indented under their parent', async () => {
+    await setDescription('- [ ] Parent\n  - [ ] Child\n    - [ ] Grandchild\n  - Plain bullet\n- [ ] Next')
+    await page.reload()
+    await openView(1)
+    // Measure after the dialog's opening animation (it scales the content).
+    await page.locator('.p-dialog').evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
+    const x = (i) => boxes().nth(i).evaluate((e) => e.getBoundingClientRect().left)
+    const [parent, child, grandchild, next] = [await x(0), await x(1), await x(2), await x(3)]
+    ensure(child - parent >= 16 && grandchild - child >= 16, `not indented: ${parent} ${child} ${grandchild}`)
+    ensure(Math.abs(next - parent) < 1, `siblings differ: ${parent} ${next}`)
+    // The child's box lines up with the parent's text.
+    const parentText = await page.getByTestId('task-description').locator('li').first().evaluate((li) => {
+      const range = document.createRange()
+      range.selectNodeContents(li.childNodes[1])
+      return range.getBoundingClientRect().left
+    })
+    ensure(Math.abs(child - parentText) < 3, `child ${child} vs parent text ${parentText}`)
+    await page.screenshot({ path: `${test.info().outputDir}/cl-2-nested.png` })
+    await closeDialog()
+  })
+
+  await test.step('nested: the last sub-item completes its parents, a parent takes its sub-items along', async () => {
+    // Parent > Child > Grandchild, a plain bullet under Parent, then Next
+    await openView(1)
+    const historyFirst = () => page.getByTestId('task-history').locator('li[data-event-type]').first()
+    await page.getByTestId('task-history').getByRole('button', { name: 'History' }).click()
+    await boxes().nth(2).click()
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="task-description"] input:checked').length === 3)
+    ensure(JSON.stringify(await checked()) === '[true,true,true,false]', JSON.stringify(await checked()))
+    ensure((await task1()).description === '- [x] Parent\n  - [x] Child\n    - [x] Grandchild\n  - Plain bullet\n- [ ] Next', 'saved')
+    await page.getByTestId('task-history').getByText('Checked “Grandchild”, completing “Parent”, “Child”').waitFor()
+
+    await boxes().nth(0).click()
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="task-description"] input:checked').length === 0)
+    await page.getByTestId('task-history').getByText('Unchecked “Parent” and 2 sub-items').waitFor()
+    ensure((await historyFirst().getAttribute('data-event-type')) === 'unchecked', 'type')
+
+    await boxes().nth(0).click()
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="task-description"] input:checked').length === 3)
+    await boxes().nth(1).click()
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="task-description"] input:checked').length === 0)
+    await page.getByTestId('task-history').getByText('Unchecked “Child” and 1 sub-item, reopening “Parent”').waitFor()
+    await closeDialog()
+  })
+
   await test.step('a description changed elsewhere is not overwritten', async () => {
     await openView(1)
     await setDescription('- [ ] Changed elsewhere\n- [ ] Second')

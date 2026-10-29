@@ -28,6 +28,7 @@ import org.springframework.http.HttpStatus;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -93,12 +94,76 @@ class TaskControllerTests {
 
         mockMvc.perform(patch("/tasks/1/checkbox")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"description\":\"- [ ] Cover letter\\n- [x] CV\"}"))
+                        .content("{\"description\":\"- [ ] Cover letter\\n- [x] CV\",\"line\":1}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.description").value("- [ ] Cover letter\n- [x] CV"));
 
-        verify(historyService).recordCheckbox(task, "CV", true, ALICE);
+        verify(historyService).recordCheckbox(task, "CV", true, List.of(), 0, ALICE);
         verify(historyService, never()).recordUpdate(any(), any(), any());
+    }
+
+    // Older clients send no line; then exactly one checkbox may change.
+    @Test
+    void checkboxWithoutLineMustBeTheOnlyChange() throws Exception {
+        Task task = aliceTask();
+        task.setDescription("- [ ] Cover letter\n- [ ] CV");
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(task));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        mockMvc.perform(patch("/tasks/1/checkbox").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"- [x] Cover letter\\n- [ ] CV\"}"))
+                .andExpect(status().isOk());
+        verify(historyService).recordCheckbox(task, "Cover letter", true, List.of(), 0, ALICE);
+
+        task.setDescription("- [ ] Cover letter\n- [ ] CV");
+        mockMvc.perform(patch("/tasks/1/checkbox").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"- [x] Cover letter\\n- [x] CV\"}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void tickingTheLastSubItemCompletesTheParent() throws Exception {
+        Task task = aliceTask();
+        task.setDescription("- [ ] Application\n  - [x] Cover letter\n  - [ ] CV");
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(task));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        mockMvc.perform(patch("/tasks/1/checkbox").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"- [x] Application\\n  - [x] Cover letter\\n  - [x] CV\",\"line\":2}"))
+                .andExpect(status().isOk());
+
+        verify(historyService).recordCheckbox(task, "CV", true, List.of("Application"), 0, ALICE);
+    }
+
+    @Test
+    void tickingAParentTicksItsSubItems() throws Exception {
+        Task task = aliceTask();
+        task.setDescription("- [ ] Application\n  - [x] Cover letter\n  - [ ] CV\n  - [ ] Portfolio");
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(task));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        mockMvc.perform(patch("/tasks/1/checkbox").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"- [x] Application\\n  - [x] Cover letter\\n  - [x] CV\\n  - [x] Portfolio\",\"line\":0}"))
+                .andExpect(status().isOk());
+
+        verify(historyService).recordCheckbox(task, "Application", true, List.of(), 2, ALICE);
+    }
+
+    @Test
+    void changesInDifferentDirectionsOrWithoutTheClickedLineAreRejected() throws Exception {
+        Task task = aliceTask();
+        task.setDescription("- [ ] Cover letter\n- [x] CV");
+        when(taskRepository.findByIdAndUserEmail(1, ALICE)).thenReturn(Optional.of(task));
+
+        mockMvc.perform(patch("/tasks/1/checkbox").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"- [x] Cover letter\\n- [ ] CV\",\"line\":0}"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/tasks/1/checkbox").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"- [x] Cover letter\\n- [x] CV\",\"line\":1}"))
+                .andExpect(status().isConflict());
+
+        verify(taskRepository, never()).save(any());
+        verifyNoInteractions(historyService);
     }
 
     @Test
@@ -110,7 +175,7 @@ class TaskControllerTests {
         // E.g. the description was edited in another tab in the meantime.
         mockMvc.perform(patch("/tasks/1/checkbox")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"description\":\"- [x] Cover letter\\n- [x] CV\"}"))
+                        .content("{\"description\":\"- [x] Cover letter\\nCV\",\"line\":0}"))
                 .andExpect(status().isConflict());
 
         verify(taskRepository, never()).save(any());

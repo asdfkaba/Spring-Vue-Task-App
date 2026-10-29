@@ -197,22 +197,31 @@ function api(method, url, body) {
     board.taskTemplate = body.template?.trim() ? body.template.trim() : null
     return [200, { template: board.taskTemplate }]
   }
-  // Like the backend: exactly one checkbox line may differ, otherwise 409.
+  // Like the backend: only checkbox lines may differ, all the same way, including the clicked line; otherwise 409.
   if ((m = p.match(/^\/tasks\/(\d+)\/checkbox$/)) && method === 'PATCH') {
     const t = tasks.find((x) => x.id === +m[1])
     const before = (t.description ?? '').split('\n')
     const after = (body.description ?? '').split('\n')
-    const changed = before.map((line, i) => i).filter((i) => before[i] !== after[i])
-    const item = /^((?:[ \t]*>)*[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[)([ xX])(\].*)$/
-    const [i] = changed
-    const was = item.exec(before[i] ?? '')
-    const is = item.exec(after[i] ?? '')
-    if (before.length !== after.length || changed.length !== 1 || !was || !is || was[1] !== is[1] || was[3] !== is[3] || (was[2] === ' ') === (is[2] === ' ')) {
-      return [409, {}]
+    if (before.length !== after.length) return [409, {}]
+    const itemRe = /^((?:[ \t]*>)*[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[)([ xX])(\].*)$/
+    const toggles = []
+    for (let i = 0; i < before.length; i++) {
+      if (before[i] === after[i]) continue
+      const was = itemRe.exec(before[i])
+      const is = itemRe.exec(after[i])
+      if (!was || !is || was[1] !== is[1] || was[3] !== is[3] || (was[2] === ' ') === (is[2] === ' ')) return [409, {}]
+      toggles.push({ line: i, item: is[3].slice(1).trim(), checked: is[2] !== ' ' })
     }
+    const clicked = toggles.find((x) => (body.line == null ? toggles.length === 1 : x.line === body.line))
+    if (!clicked || toggles.some((x) => x.checked !== clicked.checked)) return [409, {}]
     t.description = body.description
     t.edited = now()
-    record(t, is[2] === ' ' ? 'unchecked' : 'checked', { item: is[3].slice(1).trim() })
+    const changes = { item: clicked.item }
+    const parents = toggles.filter((x) => x.line < clicked.line).map((x) => x.item)
+    const subItems = toggles.filter((x) => x.line > clicked.line).length
+    if (parents.length) changes.parents = parents
+    if (subItems) changes.subItems = subItems
+    record(t, clicked.checked ? 'checked' : 'unchecked', changes)
     return [200, t]
   }
   if ((m = p.match(/^\/tasks\/(\d+)$/)) && method === 'PUT') {

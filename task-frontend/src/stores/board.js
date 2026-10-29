@@ -164,13 +164,14 @@ export const useBoardStore = defineStore('board', {
       return updated
     },
 
-    // Ticks or unticks one checkbox: description is the task's description with only that item changed.
-    // The backend rejects it (409) if the description changed in the meantime.
-    async toggleCheckbox(id, description) {
+    // Ticks or unticks a checkbox: description is the task's description with only checkboxes changed,
+    // line the clicked one (see utils/markdown applyCheckbox). The backend rejects it (409) if the
+    // description changed in the meantime.
+    async toggleCheckbox(id, description, line) {
       const found = this.findTask(id)
       if (!found) throw new Error('Task not found')
       const response = await expectOk(
-        await sendJson(`/api/tasks/${id}/checkbox`, 'PATCH', { description }),
+        await sendJson(`/api/tasks/${id}/checkbox`, 'PATCH', { description, line }),
         'Updating checklist',
       )
       const updated = await response.json()
