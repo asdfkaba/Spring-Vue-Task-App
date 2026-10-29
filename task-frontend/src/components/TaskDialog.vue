@@ -12,6 +12,7 @@ import { useBoardStore } from '@/stores/board'
 import { fromApi, toApi } from '@/utils/date'
 import { applyCheckbox, renderMarkdown } from '@/utils/markdown'
 import LabelPicker from '@/components/LabelPicker.vue'
+import MarkdownHelp from '@/components/MarkdownHelp.vue'
 import LabelPill from '@/components/LabelPill.vue'
 import TaskDetails from '@/components/TaskDetails.vue'
 import TaskHistory from '@/components/TaskHistory.vue'
@@ -297,9 +298,7 @@ async function save() {
           <div v-if="previewHtml" class="markdown" v-html="previewHtml" />
           <p v-else class="text-sm text-slate-400 dark:text-slate-500">Nothing to preview</p>
         </div>
-        <p class="text-xs text-slate-400 dark:text-slate-500">
-          Markdown supported: **bold**, *italic*, [links](https://…), lists, - [ ] checkboxes, `code`
-        </p>
+        <MarkdownHelp />
       </div>
 
       <div class="flex flex-col gap-1.5">
