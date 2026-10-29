@@ -26,6 +26,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -61,6 +62,15 @@ class BoardControllerTests {
     private void patchColumn(String json) throws Exception {
         mockMvc.perform(patch("/columns/10").contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void taskTemplateIsSetAndReturned() throws Exception {
+        when(boardService.setTaskTemplate(5, ALICE, " - [ ] Step ")).thenReturn("- [ ] Step");
+        mockMvc.perform(put("/boards/5/task-template").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"template\":\" - [ ] Step \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.template").value("- [ ] Step"));
     }
 
     @Test

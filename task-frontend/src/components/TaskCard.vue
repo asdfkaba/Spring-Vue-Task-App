@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import Button from 'primevue/button'
 import { fromApi, formatDue } from '@/utils/date'
 import { DEFAULT_COLUMN_COLOR } from '@/utils/task'
-import { renderMarkdown } from '@/utils/markdown'
+import { checkboxStates, renderMarkdown } from '@/utils/markdown'
 import LabelPill from '@/components/LabelPill.vue'
 import { highlight } from '@/utils/search'
 
@@ -30,6 +30,11 @@ const isOverdue = computed(() => due.value !== null && due.value < new Date())
 const showArrows = computed(() => !props.readonly && (props.leftColumn || props.rightColumn))
 const descriptionHtml = computed(() => renderMarkdown(props.task.description))
 const titlePieces = computed(() => highlight(props.task.title, props.terms))
+// Progress of the description's checkboxes, e.g. { done: 2, total: 5 }; null without checkboxes.
+const checklist = computed(() => {
+  const states = checkboxStates(props.task.description)
+  return states.length ? { done: states.filter(Boolean).length, total: states.length } : null
+})
 
 // A click on a link in the description follows the link instead of opening the task.
 function onClick(event) {
@@ -85,7 +90,21 @@ function onClick(event) {
       <!-- Sanitized in renderMarkdown. -->
       <div v-if="descriptionHtml" class="markdown line-clamp-3" v-html="descriptionHtml" />
 
-      <div v-if="due || showArrows" class="flex flex-wrap items-center gap-2 text-xs">
+      <div v-if="due || checklist || showArrows" class="flex flex-wrap items-center gap-2 text-xs">
+        <span
+          v-if="checklist"
+          data-testid="checklist-progress"
+          class="flex items-center gap-1 font-medium"
+          :class="
+            checklist.done === checklist.total
+              ? 'text-green-700 dark:text-green-400'
+              : 'text-slate-500 dark:text-slate-400'
+          "
+          :aria-label="`${checklist.done} of ${checklist.total} checklist items done`"
+        >
+          <i class="pi pi-check-square text-xs" aria-hidden="true" />
+          {{ checklist.done }}/{{ checklist.total }}
+        </span>
         <span
           v-if="due"
           class="flex items-center gap-1 font-medium"

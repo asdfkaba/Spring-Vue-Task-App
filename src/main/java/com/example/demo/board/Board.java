@@ -24,6 +24,10 @@ public class Board {
     @Column(length = 60)
     private String slug;
 
+    // Markdown that new tasks of this board start with as their description; null means none.
+    @Column(columnDefinition = "text")
+    private String taskTemplate;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id")
     private User user;

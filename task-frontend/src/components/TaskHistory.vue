@@ -58,6 +58,8 @@ function lines(event) {
   if (event.type === 'created') return [c.column ? `Created in ${c.column}` : 'Created']
   if (event.type === 'moved') return [`Moved from ${c.column[0]} to ${c.column[1]}`]
   if (event.type === 'deleted') return ['Deleted']
+  if (event.type === 'checked') return [`Checked ${quoted(c.item)}`]
+  if (event.type === 'unchecked') return [`Unchecked ${quoted(c.item)}`]
   const out = []
   if (c.title) out.push(`Renamed from ${quoted(c.title[0])} to ${quoted(c.title[1])}`)
   if (c.description) {
@@ -85,7 +87,14 @@ function toggleDiff(id) {
 
 const relative = (at) => formatDistanceToNow(fromApi(at), { addSuffix: true })
 const absolute = (at) => format(fromApi(at), 'yyyy-MM-dd HH:mm')
-const ICONS = { created: 'pi-plus', updated: 'pi-pencil', moved: 'pi-arrow-right', deleted: 'pi-trash' }
+const ICONS = {
+  created: 'pi-plus',
+  updated: 'pi-pencil',
+  moved: 'pi-arrow-right',
+  deleted: 'pi-trash',
+  checked: 'pi-check-square',
+  unchecked: 'pi-stop',
+}
 </script>
 
 <template>

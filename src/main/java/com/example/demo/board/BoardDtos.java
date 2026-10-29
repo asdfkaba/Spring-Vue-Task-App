@@ -18,7 +18,11 @@ public final class BoardDtos {
 
     // Columns are sorted by position, tasks by column position and then by their own position.
     public record BoardDetail(Integer id, String name, String slug, List<ColumnDto> columns, List<LabelDto> labels,
-                              List<TaskDto> tasks) {
+                              List<TaskDto> tasks, String taskTemplate) {
+    }
+
+    // Body and response of PUT /boards/{id}/task-template; null or blank removes the template.
+    public record TaskTemplate(String template) {
     }
 
     /**

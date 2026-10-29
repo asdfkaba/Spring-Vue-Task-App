@@ -5,6 +5,7 @@ import com.example.demo.board.BoardDtos.ColumnDto;
 import com.example.demo.board.BoardDtos.ColumnPatch;
 import com.example.demo.board.BoardDtos.LabelDto;
 import com.example.demo.task.Task;
+import com.example.demo.task.TaskController;
 import com.example.demo.task.TaskDto;
 import com.example.demo.task.TaskHistoryService;
 import com.example.demo.task.TaskRepository;
@@ -36,6 +37,8 @@ public class BoardService {
             new DefaultColumn("In progress", "#3b82f6"),
             new DefaultColumn("Done", "#22c55e"));
     static final int MAX_NAME_LENGTH = 50;
+    // The template becomes a description, so it has the same limit.
+    static final int MAX_TASK_TEMPLATE_LENGTH = TaskController.MAX_DESCRIPTION_LENGTH;
     static final Pattern HEX_COLOR = Pattern.compile("#[0-9a-fA-F]{6}");
 
     private final BoardRepository boardRepository;
@@ -125,7 +128,20 @@ public class BoardService {
     public BoardDetail getBoard(int boardId, String email) {
         Board board = findOwnBoard(boardId, email);
         return new BoardDetail(board.getId(), board.getName(), board.getSlug(), columnsOf(board), labelsOf(board),
-                tasksOf(board));
+                tasksOf(board), board.getTaskTemplate());
+    }
+
+    /** Sets the description new tasks of the board start with. Blank removes it. Returns what is stored. */
+    @Transactional
+    public String setTaskTemplate(int boardId, String email, String template) {
+        Board board = findOwnBoard(boardId, email);
+        String value = template == null || template.isBlank() ? null : template.strip();
+        if (value != null && value.length() > MAX_TASK_TEMPLATE_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "template must be at most " + MAX_TASK_TEMPLATE_LENGTH + " characters");
+        }
+        board.setTaskTemplate(value);
+        return value;
     }
 
     List<ColumnDto> columnsOf(Board board) {

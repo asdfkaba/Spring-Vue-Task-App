@@ -4,6 +4,7 @@ import com.example.demo.board.*;
 import com.example.demo.task.Task;
 import com.example.demo.task.TaskHistoryService;
 import com.example.demo.task.TaskRepository;
+import com.example.demo.task.TaskController;
 import com.example.demo.user.User;
 import com.example.demo.user.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -444,6 +445,42 @@ class BoardServiceTests {
                 .extracting(Board::getSlug)
                 .containsExactly("my-board", "my-board-2");
         assertThat(boardService.fillMissingSlugs()).isZero();
+    }
+
+    @Test
+    void taskTemplateIsStoredTrimmedAndShownInTheBoard() {
+        assertThat(boardService.getBoard(board.getId(), ALICE).taskTemplate()).isNull();
+        String stored = boardService.setTaskTemplate(board.getId(), ALICE, "\n## Steps\n- [ ] Cover letter\n\n");
+        assertThat(stored).isEqualTo("## Steps\n- [ ] Cover letter");
+        em.flush();
+        em.clear();
+        assertThat(boardService.getBoard(board.getId(), ALICE).taskTemplate()).isEqualTo(stored);
+    }
+
+    @Test
+    void blankTaskTemplateRemovesIt() {
+        boardService.setTaskTemplate(board.getId(), ALICE, "- [ ] Something");
+        assertThat(boardService.setTaskTemplate(board.getId(), ALICE, "  \n ")).isNull();
+        assertThat(boardService.setTaskTemplate(board.getId(), ALICE, null)).isNull();
+        assertThat(boardService.getBoard(board.getId(), ALICE).taskTemplate()).isNull();
+    }
+
+    @Test
+    void taskTemplateHasTheDescriptionLimit() {
+        String max = "a".repeat(TaskController.MAX_DESCRIPTION_LENGTH);
+        assertThat(boardService.setTaskTemplate(board.getId(), ALICE, max)).hasSize(TaskController.MAX_DESCRIPTION_LENGTH);
+        assertThatThrownBy(() -> boardService.setTaskTemplate(board.getId(), ALICE, max + "a"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("at most");
+    }
+
+    @Test
+    void cannotSetTaskTemplateOfOtherUser() {
+        userRepository.save(new User("Bob", BOB, null));
+        assertThatThrownBy(() -> boardService.setTaskTemplate(board.getId(), BOB, "x"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Board not found");
+        assertThat(boardService.getBoard(board.getId(), ALICE).taskTemplate()).isNull();
     }
 
     @Test

@@ -17,7 +17,6 @@ let events
 let eventId
 const colName = (id) => columns.find((c) => c.id === id)?.name
 const labelNames = (ids) => labels.filter((l) => (ids ?? []).includes(l.id)).map((l) => l.name).sort()
-// LocalDateTime like the backend: local time without zone.
 // Like the backend: points in time as UTC with a zone (Instant), due dates without one.
 const now = () => new Date().toISOString()
 function record(task, type, changes) {
@@ -40,6 +39,7 @@ function reset() {
     { id: 12, name: 'Done', color: '#22c55e', position: 2 },
   ]
   labels = []
+  board.taskTemplate = null
   events = []
   eventId = 1
   share = null
@@ -193,6 +193,28 @@ function api(method, url, body) {
     const cols = sortedColumns()
     return [200, { name: board.name, columns: cols, labels, tasks: cols.flatMap((c) => inColumn(c.id)) }]
   }
+  if (method === 'PUT' && p === '/boards/1/task-template') {
+    board.taskTemplate = body.template?.trim() ? body.template.trim() : null
+    return [200, { template: board.taskTemplate }]
+  }
+  // Like the backend: exactly one checkbox line may differ, otherwise 409.
+  if ((m = p.match(/^\/tasks\/(\d+)\/checkbox$/)) && method === 'PATCH') {
+    const t = tasks.find((x) => x.id === +m[1])
+    const before = (t.description ?? '').split('\n')
+    const after = (body.description ?? '').split('\n')
+    const changed = before.map((line, i) => i).filter((i) => before[i] !== after[i])
+    const item = /^((?:[ \t]*>)*[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[)([ xX])(\].*)$/
+    const [i] = changed
+    const was = item.exec(before[i] ?? '')
+    const is = item.exec(after[i] ?? '')
+    if (before.length !== after.length || changed.length !== 1 || !was || !is || was[1] !== is[1] || was[3] !== is[3] || (was[2] === ' ') === (is[2] === ' ')) {
+      return [409, {}]
+    }
+    t.description = body.description
+    t.edited = now()
+    record(t, is[2] === ' ' ? 'unchecked' : 'checked', { item: is[3].slice(1).trim() })
+    return [200, t]
+  }
   if ((m = p.match(/^\/tasks\/(\d+)$/)) && method === 'PUT') {
     const t = tasks.find((x) => x.id === +m[1])
     if (body.labelIds && body.labelIds.some((id) => !labels.some((l) => l.id === id))) return [400, {}]
@@ -236,7 +258,7 @@ http.createServer((req, res) => {
       }
       if (req.url === '/api/__state') {
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ share, shareRequests, notes, columns: sortedColumns(), labels, tasks: sortedColumns().flatMap((c) => inColumn(c.id)), log }))
+        res.end(JSON.stringify({ board, share, shareRequests, notes, columns: sortedColumns(), labels, tasks: sortedColumns().flatMap((c) => inColumn(c.id)), log }))
         return
       }
       if (req.method !== 'GET') log.push({ method: req.method, url: req.url, body })

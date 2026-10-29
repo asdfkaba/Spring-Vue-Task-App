@@ -23,7 +23,7 @@ import java.util.List;
 public class TaskController {
 
     private static final Logger LOG = LoggerFactory.getLogger(TaskController.class);
-    static final int MAX_DESCRIPTION_LENGTH = 10_000;
+    public static final int MAX_DESCRIPTION_LENGTH = 10_000;
 
     private final TaskRepository repository;
     private final UserRepository userRepository;
@@ -89,6 +89,25 @@ public class TaskController {
         Task saved = repository.save(task);
         historyService.recordUpdate(before, saved, currentUserEmail());
         return TaskDto.from(saved);
+    }
+
+    /**
+     * Ticks or unticks one checkbox of the description. The client sends the whole description with
+     * that one item changed; anything else (or a description changed in the meantime) is rejected.
+     */
+    @PatchMapping("/{id}/checkbox")
+    public TaskDto toggleCheckbox(@PathVariable("id") int id, @RequestBody CheckboxRequest input) {
+        Task task = findOwnTask(id);
+        Checklists.Toggle toggle = Checklists.singleToggle(task.getDescription(), input.description())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                        "The description must differ in exactly one checkbox"));
+        task.setDescription(input.description());
+        Task saved = repository.save(task);
+        historyService.recordCheckbox(saved, toggle.item(), toggle.checked(), currentUserEmail());
+        return TaskDto.from(saved);
+    }
+
+    public record CheckboxRequest(String description) {
     }
 
     @PatchMapping("/{id}/move")

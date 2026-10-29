@@ -31,6 +31,7 @@ export const useBoardStore = defineStore('board', {
     board: null, // the open board: { id, name }
     columns: [], // [{ id, name, color, position }]
     labels: [], // [{ id, name, color }] of the open board, in creation order
+    taskTemplate: null, // Markdown new tasks of the open board start with, or null
     tasksByColumn: {}, // { [columnId]: [task, ...] }
     loading: false,
     loaded: false,
@@ -56,6 +57,7 @@ export const useBoardStore = defineStore('board', {
       this.board = null
       this.columns = []
       this.labels = []
+      this.taskTemplate = null
       this.tasksByColumn = {}
       this.loaded = false
     },
@@ -81,6 +83,7 @@ export const useBoardStore = defineStore('board', {
         this.board = { id: detail.id, name: detail.name }
         this.columns = detail.columns
         this.labels = detail.labels ?? []
+        this.taskTemplate = detail.taskTemplate ?? null
         this.tasksByColumn = tasksByColumn
         this.loaded = true
       } finally {
@@ -156,6 +159,20 @@ export const useBoardStore = defineStore('board', {
         ...changes,
       }
       const response = await expectOk(await sendJson(`/api/tasks/${id}`, 'PUT', payload), 'Updating task')
+      const updated = await response.json()
+      this.tasksByColumn[found.columnId].splice(found.index, 1, updated)
+      return updated
+    },
+
+    // Ticks or unticks one checkbox: description is the task's description with only that item changed.
+    // The backend rejects it (409) if the description changed in the meantime.
+    async toggleCheckbox(id, description) {
+      const found = this.findTask(id)
+      if (!found) throw new Error('Task not found')
+      const response = await expectOk(
+        await sendJson(`/api/tasks/${id}/checkbox`, 'PATCH', { description }),
+        'Updating checklist',
+      )
       const updated = await response.json()
       this.tasksByColumn[found.columnId].splice(found.index, 1, updated)
       return updated
@@ -250,6 +267,14 @@ export const useBoardStore = defineStore('board', {
     },
 
     // ---- Columns ----
+
+    async setTaskTemplate(template) {
+      const response = await expectOk(
+        await sendJson(`/api/boards/${this.board.id}/task-template`, 'PUT', { template }),
+        'Saving task template',
+      )
+      this.taskTemplate = (await response.json()).template
+    },
 
     async addColumn(name, color) {
       const response = await expectOk(
