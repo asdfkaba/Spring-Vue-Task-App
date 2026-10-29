@@ -3,8 +3,8 @@ import { format, isToday, isTomorrow, isYesterday, isThisYear } from 'date-fns'
 // The backend sends two kinds of dates:
 // - Points in time (created, edited, history, notes) as ISO strings in UTC ("...Z").
 //   new Date() converts them to the browser's time zone.
-// - Due dates as wall-clock time without a zone, as an ISO string or as an array
-//   [year, month(1-12), day, hour, minute, second, nanos]. They are shown as they are.
+// - Due dates as wall-clock time without a zone ("2026-11-02T09:30:00"). They are shown as they are.
+//   Older backends sent them as an array [year, month(1-12), day, hour, minute, second, nanos].
 export function fromApi(value) {
   if (!value) return null
   if (Array.isArray(value)) {

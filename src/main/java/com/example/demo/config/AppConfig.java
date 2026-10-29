@@ -1,11 +1,9 @@
 package com.example.demo.config;
 
 import com.fasterxml.jackson.datatype.hibernate6.Hibernate6Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration
 public class AppConfig {
@@ -15,11 +13,10 @@ public class AppConfig {
         return new RestTemplate();
     }
 
+    // Spring Boot adds Module beans to its own ObjectMapper. That one writes dates as ISO strings
+    // (an Instant as "...Z") and applies the spring.jackson.* properties.
     @Bean
-    public ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new Hibernate6Module());
-        mapper.registerModule(new JavaTimeModule());
-        return mapper;
+    public Hibernate6Module hibernate6Module() {
+        return new Hibernate6Module();
     }
 }
