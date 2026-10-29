@@ -6,6 +6,7 @@ import Button from 'primevue/button'
 import { useToast } from 'primevue/usetoast'
 import { useBoardStore } from '@/stores/board'
 import { renderMarkdown } from '@/utils/markdown'
+import MarkdownHelp from '@/components/MarkdownHelp.vue'
 
 // The description new tasks of the open board start with.
 
@@ -91,9 +92,7 @@ async function save() {
         <div v-if="previewHtml" class="markdown" v-html="previewHtml" />
         <p v-else class="text-sm text-slate-400 dark:text-slate-500">Nothing to preview</p>
       </div>
-      <p class="text-xs text-slate-400 dark:text-slate-500">
-        Markdown, like the description. Checkboxes (- [ ]) can be ticked in the task view.
-      </p>
+      <MarkdownHelp />
     </form>
 
     <template #footer>
