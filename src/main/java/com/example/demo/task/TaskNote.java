@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /** A plain-text note on a task (table task_note, see V3__task_notes.sql). */
 @Entity
@@ -35,20 +35,20 @@ public class TaskNote {
     private String text;
 
     @Column(nullable = false)
-    private LocalDateTime created;
+    private Instant created;
 
     // Set when the text was changed after writing.
-    private LocalDateTime edited;
+    private Instant edited;
 
     TaskNote(Task task, User user, String text) {
         this.task = task;
         this.user = user;
         this.text = text;
-        this.created = LocalDateTime.now();
+        this.created = Instant.now();
     }
 
     void changeText(String text) {
         this.text = text;
-        this.edited = LocalDateTime.now();
+        this.edited = Instant.now();
     }
 }

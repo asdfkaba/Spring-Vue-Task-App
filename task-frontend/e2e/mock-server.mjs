@@ -18,9 +18,10 @@ let eventId
 const colName = (id) => columns.find((c) => c.id === id)?.name
 const labelNames = (ids) => labels.filter((l) => (ids ?? []).includes(l.id)).map((l) => l.name).sort()
 // LocalDateTime like the backend: local time without zone.
-const localNow = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 19) }
+// Like the backend: points in time as UTC with a zone (Instant), due dates without one.
+const now = () => new Date().toISOString()
 function record(task, type, changes) {
-  events.unshift({ id: eventId++, taskId: task.id, type, at: localNow(), user: 'Alice', changes })
+  events.unshift({ id: eventId++, taskId: task.id, type, at: now(), user: 'Alice', changes })
 }
 // Share link like the backend: a key (22 chars) plus the board slug in front; OLD_UUID imitates a pre-slug link.
 const OLD_UUID = '13d72268-5904-431b-b410-f348df9ec414'
@@ -46,7 +47,7 @@ function reset() {
   tasks = [
     { id: 1, title: 'Task A', description: 'first', due_date: null, created: null, edited: null, columnId: 10, position: 0 },
     { id: 2, title: 'Task B', description: null, due_date: [2026, 1, 1, 12, 0], created: null, edited: null, columnId: 10, position: 1 },
-    { id: 3, title: 'Task C', description: null, due_date: null, created: '2026-08-01T10:00:00', edited: null, columnId: 11, position: 0 },
+    { id: 3, title: 'Task C', description: null, due_date: null, created: '2026-08-01T10:00:00Z', edited: null, columnId: 11, position: 0 },
   ]
   notes = []
   log = []
@@ -150,7 +151,7 @@ function api(method, url, body) {
     if (method === 'POST') {
       const text = (body.text ?? '').trim()
       if (!text || text.length > 5000) return [400, {}]
-      const note = { id: nextId++, taskId, text, user: 'Alice', created: localNow(), edited: null }
+      const note = { id: nextId++, taskId, text, user: 'Alice', created: now(), edited: null }
       notes.push(note)
       const { taskId: _, ...out } = note
       return [201, out]
@@ -162,7 +163,7 @@ function api(method, url, body) {
     if (method === 'PATCH') {
       const text = (body.text ?? '').trim()
       if (!text || text.length > 5000) return [400, {}]
-      if (text !== note.text) Object.assign(note, { text, edited: localNow() })
+      if (text !== note.text) Object.assign(note, { text, edited: now() })
       const { taskId: _, ...out } = note
       return [200, out]
     }
@@ -176,7 +177,7 @@ function api(method, url, body) {
   }
   if (method === 'GET' && p === '/boards/1/share') return share ? [200, { path: `${board.slug}-${share.key}`, created: share.created }] : [204, null]
   if (method === 'POST' && p === '/boards/1/share') {
-    share = { key: newKey(), created: '2026-10-28T20:00:00' }
+    share = { key: newKey(), created: '2026-10-28T20:00:00Z' }
     return [201, { path: `${board.slug}-${share.key}`, created: share.created }]
   }
   if (method === 'DELETE' && p === '/boards/1/share') { share = null; return [204, null] }
@@ -206,7 +207,7 @@ function api(method, url, body) {
     if (added.length) changes.labelsAdded = added
     if (removed.length) changes.labelsRemoved = removed
     if (Object.keys(changes).length) record(t, 'updated', changes)
-    t.edited = localNow()
+    t.edited = now()
     return [200, t]
   }
   return [404, {}]
@@ -222,7 +223,7 @@ http.createServer((req, res) => {
       const body = raw ? JSON.parse(raw) : null
       // Test hook: add an event as older backends wrote it (e.g. a priority change).
       if (req.url === '/api/__event' && req.method === 'POST') {
-        events.unshift({ id: eventId++, at: '2026-09-01T10:00:00', user: 'Alice', ...body })
+        events.unshift({ id: eventId++, at: '2026-09-01T10:00:00Z', user: 'Alice', ...body })
         res.writeHead(204)
         res.end()
         return

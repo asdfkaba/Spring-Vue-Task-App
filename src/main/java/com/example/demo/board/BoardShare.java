@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /** A read-only link to a board: whoever knows the token can view the board without logging in. */
@@ -28,11 +28,11 @@ public class BoardShare {
     private UUID token;
 
     @Column(nullable = false)
-    private LocalDateTime created;
+    private Instant created;
 
     public BoardShare(Board board) {
         this.board = board;
         this.token = UUID.randomUUID();
-        this.created = LocalDateTime.now();
+        this.created = Instant.now();
     }
 }

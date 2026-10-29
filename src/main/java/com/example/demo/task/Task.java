@@ -8,6 +8,7 @@ import lombok.*;
 
 import org.hibernate.annotations.BatchSize;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -22,15 +23,17 @@ public class Task {
     @GeneratedValue(strategy=GenerationType.IDENTITY)
     Integer id;
     String title;
+    // Wall-clock time the user picked, without a zone.
     LocalDateTime due_date;
-    LocalDateTime created;
-    LocalDateTime edited;
+    // Points in time, stored as timestamptz; the browser shows them in its own zone.
+    Instant created;
+    Instant edited;
 
     // Markdown, rendered by the frontend. "text" because varchar(255) is too short.
     @Column(columnDefinition = "text")
     String description;
 
-    public Task(String title, LocalDateTime due_date, LocalDateTime created, String description) {
+    public Task(String title, LocalDateTime due_date, Instant created, String description) {
         this.title = title;
         this.due_date = due_date;
         this.created = created;
@@ -60,10 +63,10 @@ public class Task {
 
     @PrePersist
     protected void onCreate() {
-        this.created = LocalDateTime.now();
+        this.created = Instant.now();
     }
     @PreUpdate
     protected void onUpdate() {
-        this.edited = LocalDateTime.now();
+        this.edited = Instant.now();
     }
 }

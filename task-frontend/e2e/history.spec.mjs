@@ -7,7 +7,8 @@ test('Task history', async ({ browser }) => {
   const outDir = test.info().outputDir
   await resetMock()
 
-  const page = await browser.newPage({ viewport: { width: 1400, height: 900 } })
+  // Fixed zone: the server sends UTC and the page shows local time.
+  const page = await browser.newPage({ viewport: { width: 1400, height: 900 }, timezoneId: 'Europe/Berlin' })
   const errors = []
   page.on('pageerror', (e) => errors.push(e.message))
   async function check(...args) {
@@ -121,10 +122,21 @@ test('Task history', async ({ browser }) => {
     await openHistory()
     const texts = await entryTexts()
     expect(texts.length === 1 && texts[0].startsWith('Created'), JSON.stringify(texts))
+    // Created 2026-08-01T10:00:00Z, which is 12:00 summer time in Berlin.
     const title = await history().locator('time').first().getAttribute('title')
-    expect(title === '2026-08-01 10:00', title)
+    expect(title === '2026-08-01 12:00', title)
     await page.keyboard.press('Escape')
     await closed()
+  })
+
+  await check('times follow the browser time zone', async () => {
+    const other = await browser.newPage({ viewport: { width: 1400, height: 900 }, timezoneId: 'America/New_York' })
+    await other.goto(`${base}/boards`)
+    await other.locator('[data-task-id="3"] h3').click()
+    await other.getByTestId('task-history').getByRole('button', { name: 'History' }).click()
+    const title = await other.getByTestId('task-history').locator('time').first().getAttribute('title')
+    expect(title === '2026-08-01 06:00', title)
+    await other.close()
   })
 
   await check('old priority-only events are left out, mixed ones keep their other lines', async () => {

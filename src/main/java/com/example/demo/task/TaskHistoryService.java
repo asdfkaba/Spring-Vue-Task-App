@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -41,7 +42,7 @@ public class TaskHistoryService {
         }
     }
 
-    public record EventDto(Integer id, String type, LocalDateTime at, String user, Map<String, Object> changes) {
+    public record EventDto(Integer id, String type, Instant at, String user, Map<String, Object> changes) {
     }
 
     @Transactional
