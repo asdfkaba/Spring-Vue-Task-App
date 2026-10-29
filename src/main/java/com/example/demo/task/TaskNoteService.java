@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -29,7 +29,7 @@ public class TaskNoteService {
         this.userRepository = userRepository;
     }
 
-    public record NoteDto(Integer id, String text, String user, LocalDateTime created, LocalDateTime edited) {
+    public record NoteDto(Integer id, String text, String user, Instant created, Instant edited) {
         static NoteDto from(TaskNote note) {
             return new NoteDto(note.getId(), note.getText(), note.getUser() == null ? null : note.getUser().getName(),
                     note.getCreated(), note.getEdited());

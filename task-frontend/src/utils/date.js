@@ -1,8 +1,10 @@
 import { format, isToday, isTomorrow, isYesterday, isThisYear } from 'date-fns'
 
-// The backend (Jackson + LocalDateTime) sends dates either as an array
-// [year, month(1-12), day, hour, minute, second, nanos] or as an ISO string
-// without a time zone. Both mean local time.
+// The backend sends two kinds of dates:
+// - Points in time (created, edited, history, notes) as ISO strings in UTC ("...Z").
+//   new Date() converts them to the browser's time zone.
+// - Due dates as wall-clock time without a zone, as an ISO string or as an array
+//   [year, month(1-12), day, hour, minute, second, nanos]. They are shown as they are.
 export function fromApi(value) {
   if (!value) return null
   if (Array.isArray(value)) {

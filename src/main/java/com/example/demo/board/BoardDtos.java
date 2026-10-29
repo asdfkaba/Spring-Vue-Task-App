@@ -3,7 +3,7 @@ package com.example.demo.board;
 import com.example.demo.task.TaskDto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public final class BoardDtos {
@@ -31,7 +31,7 @@ public final class BoardDtos {
     }
 
     // path goes after /share/ in the link, e.g. "bewerbungen-E9ciaFkEQxu0EPNI3p7EFA".
-    public record ShareDto(String path, LocalDateTime created) {
+    public record ShareDto(String path, Instant created) {
         static ShareDto from(BoardShare share) {
             return new ShareDto(ShareLinks.path(share.getBoard().getSlug(), share.getToken()), share.getCreated());
         }

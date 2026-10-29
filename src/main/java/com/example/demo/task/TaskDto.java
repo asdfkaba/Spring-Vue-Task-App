@@ -2,6 +2,7 @@ package com.example.demo.task;
 
 import com.example.demo.board.BoardLabel;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -10,8 +11,8 @@ public record TaskDto(
         String title,
         String description,
         LocalDateTime due_date,
-        LocalDateTime created,
-        LocalDateTime edited,
+        Instant created,
+        Instant edited,
         Integer columnId,
         int position,
         List<Integer> labelIds) {

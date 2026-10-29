@@ -32,7 +32,7 @@ class ProductionBaselineMigrationTests {
                 insert into "user" (email, name) values ('moritz@example.com', 'Moritz');
                 insert into board (name, slug, user_id) values ('Bewerbungen', 'bewerbungen', 1);
                 insert into board_column (name, color, position, board_id) values ('Abgeschickt', '#3b82f6', 0, 1);
-                insert into task (title, position, board_column_id, user_id, priority, status) values ('Old task', 0, 1, 1, 2, 'TODO');
+                insert into task (title, created, position, board_column_id, user_id, priority, status) values ('Old task', '2026-10-29 09:00:00', 0, 1, 1, 2, 'TODO');
                 """);
     }
 
@@ -64,6 +64,19 @@ class ProductionBaselineMigrationTests {
     private java.util.List<String> columnsOf(String table) {
         return jdbc.queryForList(
                 "select column_name from information_schema.columns where table_name = ?", String.class, table);
+    }
+
+    @Test
+    void storedTimesAreReadAsUtc() {
+        // The server wrote LocalDateTime.now() in UTC; after V4 the same value is that UTC instant.
+        assertThat(jdbc.queryForObject("select data_type from information_schema.columns"
+                + " where table_name = 'task' and column_name = 'created'", String.class))
+                .isEqualTo("timestamp with time zone");
+        assertThat(jdbc.queryForObject("select extract(epoch from created)::bigint from task", Long.class))
+                .isEqualTo(java.time.Instant.parse("2026-10-29T09:00:00Z").getEpochSecond());
+        assertThat(jdbc.queryForObject("select data_type from information_schema.columns"
+                + " where table_name = 'task' and column_name = 'due_date'", String.class))
+                .isEqualTo("timestamp without time zone");
     }
 
     @Test

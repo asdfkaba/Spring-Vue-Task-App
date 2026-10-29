@@ -17,7 +17,7 @@ import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.Mockito.*;
@@ -45,7 +45,7 @@ class TaskNoteControllerTests {
     TokenService tokenService;
 
     private static NoteDto note(String text) {
-        return new NoteDto(5, text, "Alice", LocalDateTime.of(2026, 10, 28, 10, 0), null);
+        return new NoteDto(5, text, "Alice", Instant.parse("2026-10-28T10:00:00Z"), null);
     }
 
     @Test
@@ -54,7 +54,9 @@ class TaskNoteControllerTests {
         mockMvc.perform(get("/tasks/1/notes"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].text").value("Called"))
-                .andExpect(jsonPath("$[0].user").value("Alice"));
+                .andExpect(jsonPath("$[0].user").value("Alice"))
+                // With a zone, so the browser can convert it to local time.
+                .andExpect(jsonPath("$[0].created").value("2026-10-28T10:00:00Z"));
     }
 
     @Test

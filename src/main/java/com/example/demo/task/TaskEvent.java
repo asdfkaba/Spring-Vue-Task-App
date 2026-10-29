@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * One entry in a task's history: created, updated, moved or deleted, and what changed.
@@ -37,7 +37,7 @@ public class TaskEvent {
     private User user;
 
     @Column(nullable = false)
-    private LocalDateTime at;
+    private Instant at;
 
     // Stored as plain text, not @Enumerated: Hibernate would add a CHECK constraint with the current
     // values, and ddl-auto=update never changes it, so a new type would fail on existing databases.
@@ -54,6 +54,6 @@ public class TaskEvent {
         this.user = user;
         this.type = type.name();
         this.changes = changes;
-        this.at = LocalDateTime.now();
+        this.at = Instant.now();
     }
 }

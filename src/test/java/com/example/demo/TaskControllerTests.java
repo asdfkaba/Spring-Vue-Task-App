@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -77,7 +78,7 @@ class TaskControllerTests {
         User alice = new User("Alice", ALICE, null);
         Task task = new Task("Old title", LocalDateTime.of(2026, 10, 27, 12, 0), null, "Old description");
         task.setId(1);
-        task.setCreated(LocalDateTime.of(2026, 10, 1, 9, 0));
+        task.setCreated(Instant.parse("2026-10-01T09:00:00Z"));
         task.setUser(alice);
         task.setBoardColumn(aliceColumn());
         return task;
@@ -104,7 +105,7 @@ class TaskControllerTests {
         assertThat(saved.getValue().getDue_date()).isEqualTo(LocalDateTime.of(2026, 11, 2, 9, 30));
         // PUT does not move tasks; that is what /move is for.
         assertThat(saved.getValue().getBoardColumn().getId()).isEqualTo(10);
-        assertThat(saved.getValue().getCreated()).isEqualTo(LocalDateTime.of(2026, 10, 1, 9, 0));
+        assertThat(saved.getValue().getCreated()).isEqualTo(Instant.parse("2026-10-01T09:00:00Z"));
         assertThat(saved.getValue().getUser().getEmail()).isEqualTo(ALICE);
     }
 
