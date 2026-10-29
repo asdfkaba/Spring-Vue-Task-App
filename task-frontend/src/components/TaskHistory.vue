@@ -58,8 +58,7 @@ function lines(event) {
   if (event.type === 'created') return [c.column ? `Created in ${c.column}` : 'Created']
   if (event.type === 'moved') return [`Moved from ${c.column[0]} to ${c.column[1]}`]
   if (event.type === 'deleted') return ['Deleted']
-  if (event.type === 'checked') return [`Checked ${quoted(c.item)}`]
-  if (event.type === 'unchecked') return [`Unchecked ${quoted(c.item)}`]
+  if (event.type === 'checked' || event.type === 'unchecked') return [checkboxLine(event.type === 'checked', c)]
   const out = []
   if (c.title) out.push(`Renamed from ${quoted(c.title[0])} to ${quoted(c.title[1])}`)
   if (c.description) {
@@ -77,6 +76,14 @@ function lines(event) {
   if (c.labelsAdded) out.push(`Added ${c.labelsAdded.length === 1 ? 'label' : 'labels'} ${names(c.labelsAdded)}`)
   if (c.labelsRemoved) out.push(`Removed ${c.labelsRemoved.length === 1 ? 'label' : 'labels'} ${names(c.labelsRemoved)}`)
   return out
+}
+
+// e.g. "Checked “CV”, completing “Application”" or "Unchecked “Application” and 3 sub-items"
+function checkboxLine(checked, c) {
+  let text = `${checked ? 'Checked' : 'Unchecked'} ${quoted(c.item)}`
+  if (c.subItems) text += ` and ${c.subItems} ${c.subItems === 1 ? 'sub-item' : 'sub-items'}`
+  if (c.parents?.length) text += `, ${checked ? 'completing' : 'reopening'} ${c.parents.map(quoted).join(', ')}`
+  return text
 }
 
 function toggleDiff(id) {

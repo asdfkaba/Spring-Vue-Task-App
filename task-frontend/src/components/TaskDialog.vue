@@ -10,7 +10,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { useBoardStore } from '@/stores/board'
 import { fromApi, toApi } from '@/utils/date'
-import { renderMarkdown, toggleCheckbox } from '@/utils/markdown'
+import { applyCheckbox, renderMarkdown } from '@/utils/markdown'
 import LabelPicker from '@/components/LabelPicker.vue'
 import LabelPill from '@/components/LabelPill.vue'
 import TaskDetails from '@/components/TaskDetails.vue'
@@ -112,18 +112,18 @@ function switchMode(target) {
   else backToView()
 }
 
-// Ticking a checkbox in the view saves right away (only that one item changes).
+// Ticking a checkbox in the view saves right away; sub-items and parents follow (see applyCheckbox).
 const checking = ref(false)
 async function onToggleCheckbox(index) {
   const task = current.value
-  const description = toggleCheckbox(task.description ?? '', index)
-  if (description === null) {
+  const change = applyCheckbox(task.description ?? '', index)
+  if (change === null) {
     toast.add({ severity: 'error', summary: 'Could not find that checkbox', life: 5000 })
     return
   }
   checking.value = true
   try {
-    await store.toggleCheckbox(task.id, description)
+    await store.toggleCheckbox(task.id, change.description, change.line)
   } catch (err) {
     if (err.status === 409) {
       toast.add({ severity: 'warn', summary: 'The task was changed elsewhere', detail: 'Loaded the current version.', life: 5000 })
