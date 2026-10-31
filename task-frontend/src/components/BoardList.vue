@@ -1,4 +1,5 @@
 <script setup>
+import { useRoute } from 'vue-router'
 import Button from 'primevue/button'
 import { useBoardStore } from '@/stores/board'
 
@@ -7,6 +8,9 @@ import { useBoardStore } from '@/stores/board'
 const emit = defineEmits(['create', 'delete', 'navigate'])
 
 const store = useBoardStore()
+const route = useRoute()
+// Highlighted on the board and on its settings page.
+const isOpen = (board) => route.params.slug === board.slug
 </script>
 
 <template>
@@ -16,7 +20,8 @@ const store = useBoardStore()
         <RouterLink
           :to="{ name: 'board', params: { slug: board.slug } }"
           class="flex items-center gap-2 rounded-lg py-2 pr-9 pl-3 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
-          active-class="bg-slate-100 dark:bg-slate-800 font-semibold !text-slate-900 dark:!text-slate-100"
+          :class="{ 'bg-slate-100 dark:bg-slate-800 font-semibold !text-slate-900 dark:!text-slate-100': isOpen(board) }"
+          :aria-current="isOpen(board) ? 'page' : undefined"
           @click="emit('navigate')"
         >
           <i class="pi pi-th-large text-xs text-slate-400 dark:text-slate-500" aria-hidden="true" />

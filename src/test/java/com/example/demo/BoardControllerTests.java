@@ -119,6 +119,20 @@ class BoardControllerTests {
     }
 
     @Test
+    void renameBoardReturnsSummaryWithNewSlug() throws Exception {
+        Board renamed = new Board("Job hunt", null);
+        renamed.setId(5);
+        renamed.setSlug("job-hunt");
+        when(boardService.renameBoard(5, ALICE, "Job hunt")).thenReturn(renamed);
+
+        mockMvc.perform(patch("/boards/5").contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Job hunt\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(5))
+                .andExpect(jsonPath("$.name").value("Job hunt"))
+                .andExpect(jsonPath("$.slug").value("job-hunt"));
+    }
+
+    @Test
     void deleteBoard() throws Exception {
         mockMvc.perform(delete("/boards/5")).andExpect(status().isNoContent());
 

@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { formatTitle } from '@/utils/title'
 
+// Board and board settings share one view, so the sidebar and the loaded board stay when switching.
+const BoardView = () => import('../views/BoardView.vue')
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -15,8 +18,14 @@ const router = createRouter({
       // opens the last used (or first) board.
       path: '/boards/:slug?',
       name: 'board',
-      component: () => import('../views/BoardView.vue'),
+      component: BoardView,
       // Sidebar and board use the full window width.
+      meta: { requiresAuth: true, fullWidth: true },
+    },
+    {
+      path: '/boards/:slug/settings',
+      name: 'board-settings',
+      component: BoardView,
       meta: { requiresAuth: true, fullWidth: true },
     },
     {

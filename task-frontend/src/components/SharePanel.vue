@@ -1,6 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
-import Dialog from 'primevue/dialog'
+import { computed, onMounted, ref } from 'vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import { useConfirm } from 'primevue/useconfirm'
@@ -8,16 +7,15 @@ import { useToast } from 'primevue/usetoast'
 import { useBoardStore } from '@/stores/board'
 import { fromApi, formatShort } from '@/utils/date'
 
-// Creates, shows and revokes the read-only share link of a board.
-const visible = defineModel('visible', { type: Boolean, default: false })
-const props = defineProps({ board: { type: Object, default: null } }) // { id, name }
+// Creates, shows and revokes the read-only share link of a board. Part of the board settings.
+const props = defineProps({ board: { type: Object, required: true } }) // { id, name }
 
 const store = useBoardStore()
 const confirm = useConfirm()
 const toast = useToast()
 
 const share = ref(null) // { path, created } or null; path is "<board-slug>-<key>"
-const loading = ref(false)
+const loading = ref(true)
 const busy = ref(false)
 const urlInput = ref()
 
@@ -28,9 +26,7 @@ function showError(summary, err) {
   toast.add({ severity: 'error', summary, detail: err.message, life: 5000 })
 }
 
-watch(visible, async (open) => {
-  if (!open || !props.board) return
-  share.value = null
+onMounted(async () => {
   loading.value = true
   try {
     share.value = await store.fetchShare(props.board.id)
@@ -98,65 +94,56 @@ function askStop() {
 </script>
 
 <template>
-  <Dialog
-    v-model:visible="visible"
-    modal
-    :header="board ? `Share “${board.name}”` : 'Share'"
-    :style="{ width: '32rem' }"
-    :breakpoints="{ '640px': '95vw' }"
-    :draggable="false"
-  >
-    <div class="flex flex-col gap-4 pt-1">
-      <p class="text-sm text-slate-600 dark:text-slate-400">
-        Anyone with the link can view this board without logging in. They can't change anything.
-      </p>
+  <div class="flex flex-col gap-4">
+    <p class="text-sm text-slate-600 dark:text-slate-400">
+      Anyone with the link can view this board without logging in. They can't change anything.
+    </p>
 
-      <p v-if="loading" class="text-sm text-slate-400 dark:text-slate-500">Loading…</p>
+    <p v-if="loading" class="text-sm text-slate-400 dark:text-slate-500">Loading…</p>
 
-      <Button
-        v-else-if="!share"
-        label="Create link"
-        icon="pi pi-link"
-        :loading="busy"
-        class="self-start"
-        @click="createLink"
-      />
+    <Button
+      v-else-if="!share"
+      label="Create link"
+      icon="pi pi-link"
+      :loading="busy"
+      class="self-start"
+      @click="createLink"
+    />
 
-      <template v-else>
-        <div class="flex gap-2">
-          <InputText
-            ref="urlInput"
-            :value="url"
-            readonly
-            aria-label="Share link"
-            fluid
-            class="font-mono !text-xs"
-            @focus="$event.target.select()"
-          />
-          <Button label="Copy" icon="pi pi-copy" class="shrink-0" @click="copyLink" />
-        </div>
-        <p v-if="created" class="text-xs text-slate-500 dark:text-slate-400">Created {{ formatShort(created) }}</p>
-        <div class="flex flex-wrap gap-2">
-          <Button
-            label="Replace link"
-            icon="pi pi-refresh"
-            severity="secondary"
-            text
-            size="small"
-            :disabled="busy"
-            @click="askReplace"
-          />
-          <Button
-            label="Stop sharing"
-            icon="pi pi-ban"
-            severity="danger"
-            text
-            size="small"
-            :disabled="busy"
-            @click="askStop"
-          />
-        </div>
-      </template>
-    </div>
-  </Dialog>
+    <template v-else>
+      <div class="flex gap-2">
+        <InputText
+          ref="urlInput"
+          :value="url"
+          readonly
+          aria-label="Share link"
+          fluid
+          class="font-mono !text-xs"
+          @focus="$event.target.select()"
+        />
+        <Button label="Copy" icon="pi pi-copy" class="shrink-0" @click="copyLink" />
+      </div>
+      <p v-if="created" class="text-xs text-slate-500 dark:text-slate-400">Created {{ formatShort(created) }}</p>
+      <div class="flex flex-wrap gap-2">
+        <Button
+          label="Replace link"
+          icon="pi pi-refresh"
+          severity="secondary"
+          text
+          size="small"
+          :disabled="busy"
+          @click="askReplace"
+        />
+        <Button
+          label="Stop sharing"
+          icon="pi pi-ban"
+          severity="danger"
+          text
+          size="small"
+          :disabled="busy"
+          @click="askStop"
+        />
+      </div>
+    </template>
+  </div>
 </template>

@@ -10,7 +10,9 @@ import { useBoardStore } from '@/stores/board'
 
 // Picks the labels of a task and manages the board's labels (create, rename, recolor, delete).
 // Label changes are saved right away; which labels the task has is saved with the task.
+// Without selectable (board settings) it only manages the labels.
 const selected = defineModel({ type: Array, default: () => [] }) // label ids
+defineProps({ selectable: { type: Boolean, default: true } })
 
 const store = useBoardStore()
 const confirm = useConfirm()
@@ -83,7 +85,11 @@ function askDelete(label) {
         @cancel="editingId = null"
       />
       <div v-else class="flex items-center gap-1">
+        <div v-if="!selectable" class="flex min-w-0 flex-1 items-center px-1 py-1">
+          <LabelPill :label="label" />
+        </div>
         <label
+          v-else
           class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           <Checkbox

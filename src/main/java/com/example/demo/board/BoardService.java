@@ -88,6 +88,31 @@ public class BoardService {
         boardRepository.delete(board);
     }
 
+    /**
+     * Renames the board. The slug follows the new name, so the board's URL matches it again;
+     * share links keep working because only their key counts.
+     */
+    @Transactional
+    public Board renameBoard(int boardId, String email, String name) {
+        Board board = findOwnBoard(boardId, email);
+        String newName = validName(name, "Board");
+        if (!slugFits(board.getSlug(), newName)) {
+            board.setSlug(uniqueSlug(board.getUser(), newName));
+        }
+        board.setName(newName);
+        return board;
+    }
+
+    // True if the slug already belongs to the name ("my-board" or "my-board-2" for "My board"),
+    // so a rename that only changes case or punctuation keeps the URL.
+    private static boolean slugFits(String slug, String name) {
+        if (slug == null) {
+            return false;
+        }
+        String base = BoardSlugs.fromName(name);
+        return slug.equals(base) || slug.matches(Pattern.quote(base) + "-\\d+");
+    }
+
     /** Adds slugs to boards that don't have one yet; returns how many were filled. */
     @Transactional
     public int fillMissingSlugs() {

@@ -98,6 +98,16 @@ export const useBoardStore = defineStore('board', {
       return board
     },
 
+    // Returns { id, name, slug }; the slug follows the new name, so the caller updates the URL.
+    async renameBoard(id, name) {
+      const response = await expectOk(await sendJson(`/api/boards/${id}`, 'PATCH', { name }), 'Renaming board')
+      const board = await response.json()
+      const index = this.boards.findIndex((b) => b.id === id)
+      if (index !== -1) this.boards.splice(index, 1, board)
+      if (this.board?.id === id) this.board = { ...this.board, name: board.name }
+      return board
+    },
+
     async deleteBoard(id) {
       await expectOk(await authFetch(`/api/boards/${id}`, { method: 'DELETE' }), 'Deleting board')
       this.boards = this.boards.filter((b) => b.id !== id)

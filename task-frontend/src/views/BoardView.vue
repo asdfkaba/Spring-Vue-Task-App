@@ -18,8 +18,7 @@ import ColumnDeleteDialog from '@/components/ColumnDeleteDialog.vue'
 import BoardList from '@/components/BoardList.vue'
 import BoardDialog from '@/components/BoardDialog.vue'
 import BoardDeleteDialog from '@/components/BoardDeleteDialog.vue'
-import ShareDialog from '@/components/ShareDialog.vue'
-import TaskTemplateDialog from '@/components/TaskTemplateDialog.vue'
+import BoardSettings from '@/components/BoardSettings.vue'
 import { usePageTitle } from '@/utils/title'
 
 const store = useBoardStore()
@@ -62,7 +61,7 @@ function handleLoadError(summary, err) {
 // Opens the board from the URL slug. Without one, it opens the last used board, or else the first one.
 // The board list maps the slug to the id the API works with.
 async function openBoardFromRoute() {
-  if (route.name !== 'board') return
+  if (route.name !== 'board' && route.name !== 'board-settings') return
   try {
     if (!store.boardsLoaded) await store.fetchBoards()
   } catch (err) {
@@ -90,6 +89,8 @@ async function openBoardFromRoute() {
   }
 
   writeStorage(LAST_BOARD_KEY, String(board.id))
+  // Same board under a new slug (renamed): it is loaded already.
+  if (store.loaded && store.board?.id === board.id) return
   try {
     await store.fetchBoard(board.id)
   } catch (err) {
@@ -124,8 +125,6 @@ watch(sidebarCollapsed, (collapsed) => writeStorage(SIDEBAR_KEY, collapsed ? '1'
 const drawerVisible = ref(false)
 
 const boardDialogVisible = ref(false)
-const shareDialogVisible = ref(false)
-const templateDialogVisible = ref(false)
 const deleteBoardVisible = ref(false)
 const deletingBoard = ref(null)
 
@@ -139,6 +138,9 @@ function askDeleteBoard(board) {
   deletingBoard.value = board
   deleteBoardVisible.value = true
 }
+
+// /boards/<slug>/settings shows the board's settings instead of its columns.
+const settingsOpen = computed(() => route.name === 'board-settings')
 
 // ---- Small screens: one column at a time, with tabs ----
 // Matches Tailwind's md breakpoint (48rem).
@@ -259,6 +261,7 @@ const taskDialogMode = ref('view')
 usePageTitle(() => {
   if (store.boardsLoaded && store.boards.length === 0) return ['Boards']
   const boardName = store.board?.name
+  if (settingsOpen.value) return ['Settings', boardName]
   if (!taskDialogVisible.value) return [boardName]
   if (!editingTask.value) return ['New task', boardName]
   // The store replaces a task object when it is saved, so read the current title.
@@ -474,7 +477,8 @@ function askDeleteColumn(column) {
             <h1 class="truncate text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100 md:text-2xl">
               {{ store.board?.name ?? 'Boards' }}
             </h1>
-            <p v-if="store.loaded" class="hidden text-sm text-slate-500 dark:text-slate-400 md:block">
+            <p v-if="settingsOpen" class="text-sm text-slate-500 dark:text-slate-400">Board settings</p>
+            <p v-else-if="store.loaded" class="hidden text-sm text-slate-500 dark:text-slate-400 md:block">
               <template v-if="filterActive">{{ matchingCount }} of {{ store.taskCount }} tasks match</template>
               <template v-else>
                 {{ store.taskCount }} {{ store.taskCount === 1 ? 'task' : 'tasks' }} ·
@@ -483,8 +487,18 @@ function askDeleteColumn(column) {
             </p>
           </div>
         </div>
+        <div v-if="store.board && settingsOpen" class="flex shrink-0 gap-2">
+          <Button
+            :label="isMobile ? undefined : 'Back to board'"
+            aria-label="Back to board"
+            icon="pi pi-arrow-left"
+            severity="secondary"
+            outlined
+            @click="router.push({ name: 'board', params: { slug: route.params.slug } })"
+          />
+        </div>
         <!-- Icon-only buttons on small screens to keep the header in one line -->
-        <div v-if="store.board" class="flex shrink-0 gap-2">
+        <div v-else-if="store.board" class="flex shrink-0 gap-2">
           <Button
             v-if="isMobile"
             icon="pi pi-search"
@@ -495,20 +509,12 @@ function askDeleteColumn(column) {
             @click="toggleFilterRow"
           />
           <Button
-            :label="isMobile ? undefined : 'Share'"
-            aria-label="Share"
-            icon="pi pi-share-alt"
+            :label="isMobile ? undefined : 'Settings'"
+            aria-label="Board settings"
+            icon="pi pi-cog"
             severity="secondary"
             outlined
-            @click="shareDialogVisible = true"
-          />
-          <Button
-            title="Task template"
-            aria-label="Task template"
-            icon="pi pi-file-edit"
-            severity="secondary"
-            outlined
-            @click="templateDialogVisible = true"
+            @click="router.push({ name: 'board-settings', params: { slug: route.params.slug } })"
           />
           <!-- Small screens have the + in the column tabs instead. -->
           <Button
@@ -530,7 +536,7 @@ function askDeleteColumn(column) {
       </div>
 
       <BoardFilter
-        v-if="store.loaded && (!isMobile || filterOpen || filterActive)"
+        v-if="store.loaded && !settingsOpen && (!isMobile || filterOpen || filterActive)"
         ref="filterBar"
         v-model:text="filterText"
         v-model:labelIds="filterLabelIds"
@@ -553,6 +559,8 @@ function askDeleteColumn(column) {
       <div v-else-if="store.loading && !store.loaded" class="flex gap-4 overflow-hidden">
         <Skeleton v-for="n in 3" :key="n" width="18rem" height="20rem" borderRadius="0.75rem" class="shrink-0" />
       </div>
+
+      <BoardSettings v-else-if="store.loaded && settingsOpen" @delete="askDeleteBoard" />
 
       <template v-else-if="store.loaded">
         <!-- Small screens: tabs to jump between columns -->
@@ -695,8 +703,6 @@ function askDeleteColumn(column) {
       <ColumnDialog v-model:visible="columnDialogVisible" :column="editingColumn" @created="showNewColumn" />
       <ColumnDeleteDialog v-model:visible="deleteDialogVisible" :column="deletingColumn" />
       <BoardDialog v-model:visible="boardDialogVisible" />
-      <ShareDialog v-model:visible="shareDialogVisible" :board="store.board" />
-      <TaskTemplateDialog v-model:visible="templateDialogVisible" />
       <BoardDeleteDialog v-model:visible="deleteBoardVisible" :board="deletingBoard" @deleted="onBoardDeleted" />
     </section>
   </div>

@@ -57,13 +57,13 @@ test('Markdown formatting help', async ({ browser }) => {
     await closed()
   })
 
-  await test.step('the template dialog has the same help', async () => {
-    await page.getByRole('button', { name: 'Task template' }).click()
+  await test.step('the template in the board settings has the same help', async () => {
+    await page.getByRole('button', { name: 'Board settings' }).click()
     await page.getByRole('button', { name: 'Formatting help (Markdown)' }).click()
     await help().waitFor()
     ensure((await help().getByTestId('markdown-example').count()) >= 12, 'examples missing')
-    await page.keyboard.press('Escape')
-    await closed()
+    await page.getByRole('button', { name: 'Back to board' }).click()
+    await page.locator('[data-task-id="1"]').waitFor()
   })
 
   await test.step('dark mode and phone', async () => {
