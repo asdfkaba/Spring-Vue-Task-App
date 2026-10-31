@@ -29,16 +29,16 @@ test('Readable share links', async ({ browser }) => {
   await page.getByText('Task A', { exact: true }).waitFor()
 
   let link
-  await check('dialog shows a link with board name and short key', async () => {
-    await page.getByRole('button', { name: 'Share' }).click()
+  await check('settings show a link with board name and short key', async () => {
+    await page.getByRole('button', { name: 'Board settings' }).click()
     await page.getByRole('button', { name: 'Create link' }).click()
     await shareInput().waitFor()
     link = await shareInput().inputValue()
     expect(/^\/share\/my-board-[A-Za-z0-9_-]{22}$/.test(pathOf(link)), link)
     await page.getByRole('button', { name: 'Copy' }).click()
     expect((await page.evaluate(() => navigator.clipboard.readText())) === link, 'clipboard')
-    await page.screenshot({ path: `${outDir}/sl-1-dialog.png` })
-    await page.keyboard.press('Escape')
+    await page.screenshot({ path: `${outDir}/sl-1-settings.png` })
+    await page.getByRole('button', { name: 'Back to board' }).click()
   })
 
   await check('guest opens the link, address stays, loaded once', async () => {
@@ -74,9 +74,9 @@ test('Readable share links', async ({ browser }) => {
   })
 
   await check('replacing the link kills the old one', async () => {
-    await page.getByRole('button', { name: 'Share' }).click()
+    await page.getByRole('button', { name: 'Board settings' }).click()
     await shareInput().waitFor()
-    expect((await shareInput().inputValue()) === link, 'reopened dialog shows another link')
+    expect((await shareInput().inputValue()) === link, 'reopened settings show another link')
     await page.getByRole('button', { name: 'Replace link' }).click()
     await page.locator('.p-confirmdialog').getByRole('button', { name: 'Replace link' }).click()
     await page.waitForFunction((old) => document.querySelector('input[aria-label="Share link"]')?.value !== old, link)

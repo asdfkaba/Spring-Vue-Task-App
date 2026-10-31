@@ -11,8 +11,16 @@ test('Task template', async ({ browser }) => {
   page.on('pageerror', (e) => errors.push(e.message))
   const ensure = (cond, msg) => { if (!cond) throw new Error(msg) }
   const state = async () => (await fetch(`${BASE}/api/__state`)).json()
-  const templateDialog = () => page.locator('.p-dialog').filter({ hasText: 'Task template' })
+  const templateSection = () => page.getByRole('region', { name: 'Task template' })
   const closed = () => page.waitForFunction(() => !document.querySelector('.p-dialog'))
+  const openSettings = async () => {
+    await page.getByRole('button', { name: 'Board settings' }).click()
+    await templateSection().waitFor()
+  }
+  const backToBoard = async () => {
+    await page.getByRole('button', { name: 'Back to board' }).click()
+    await page.locator('[data-task-id="1"]').waitFor()
+  }
 
   await page.goto(`${BASE}/boards`)
   await page.locator('[data-task-id="1"]').waitFor()
@@ -26,16 +34,20 @@ test('Task template', async ({ browser }) => {
   })
 
   await test.step('setting the template with preview', async () => {
-    await page.getByRole('button', { name: 'Task template' }).click()
-    await templateDialog().waitFor()
+    await openSettings()
     ensure((await page.locator('#task-template').inputValue()) === '', 'not empty')
+    ensure(await templateSection().getByRole('button', { name: 'Save template' }).isDisabled(), 'save enabled without change')
     await page.locator('#task-template').fill(`\n${TEMPLATE}\n\n`)
-    await templateDialog().getByRole('button', { name: 'preview' }).click()
+    await templateSection().getByRole('button', { name: 'preview' }).click()
     ensure((await page.getByTestId('template-preview').locator('input[type="checkbox"]').count()) === 2, 'preview')
-    await page.screenshot({ path: `${test.info().outputDir}/tp-1-dialog.png` })
-    await templateDialog().getByRole('button', { name: 'Save' }).click()
-    await closed()
+    await page.screenshot({ path: `${test.info().outputDir}/tp-1-settings.png` })
+    await templateSection().getByRole('button', { name: 'Save template' }).click()
+    await page.locator('.p-toast').getByText('Template saved').waitFor()
     ensure((await state()).board.taskTemplate === TEMPLATE, JSON.stringify((await state()).board.taskTemplate))
+    await templateSection().getByRole('button', { name: 'write' }).click()
+    ensure((await page.locator('#task-template').inputValue()) === TEMPLATE, 'not shown trimmed')
+    ensure(await templateSection().getByRole('button', { name: 'Save template' }).isDisabled(), 'save enabled after saving')
+    await backToBoard()
   })
 
   await test.step('a new task starts with the template and can change it', async () => {
@@ -70,16 +82,16 @@ test('Task template', async ({ browser }) => {
   await test.step('the template survives a reload', async () => {
     await page.reload()
     await page.locator('[data-task-id="1"]').waitFor()
-    await page.getByRole('button', { name: 'Task template' }).click()
+    await openSettings()
     ensure((await page.locator('#task-template').inputValue()) === TEMPLATE, 'lost')
   })
 
   await test.step('emptying it removes the template', async () => {
     await page.locator('#task-template').fill('   ')
-    await templateDialog().getByRole('button', { name: 'Save' }).click()
+    await templateSection().getByRole('button', { name: 'Save template' }).click()
     await page.locator('.p-toast').getByText('Template removed').waitFor()
-    await closed()
     ensure((await state()).board.taskTemplate === null, 'still set')
+    await backToBoard()
     await page.getByRole('button', { name: 'New task' }).click()
     ensure((await page.locator('#task-description').inputValue()) === '', 'still prefilled')
     await page.keyboard.press('Escape')
@@ -88,7 +100,7 @@ test('Task template', async ({ browser }) => {
 
   await test.step('dark mode', async () => {
     await page.evaluate(() => document.documentElement.classList.add('dark'))
-    await page.getByRole('button', { name: 'Task template' }).click()
+    await openSettings()
     await page.locator('#task-template').fill(TEMPLATE)
     await page.waitForTimeout(300)
     await page.screenshot({ path: `${test.info().outputDir}/tp-2-dark.png` })

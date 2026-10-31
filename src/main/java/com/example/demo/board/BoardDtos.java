@@ -62,6 +62,11 @@ public final class BoardDtos {
     public record NewBoardRequest(String name) {
     }
 
+    // Body of PATCH /boards/{id}; the name is the only thing that can change for now.
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record RenameBoardRequest(String name) {
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record NewColumnRequest(String name, String color) {
     }

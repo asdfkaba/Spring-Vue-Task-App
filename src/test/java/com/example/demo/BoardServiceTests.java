@@ -484,6 +484,48 @@ class BoardServiceTests {
     }
 
     @Test
+    void renamingMovesTheSlugToTheNewName() {
+        boardService.createBoard(ALICE, "Applications");
+
+        Board renamed = boardService.renameBoard(board.getId(), ALICE, "  Applications  ");
+
+        assertThat(renamed.getName()).isEqualTo("Applications");
+        assertThat(renamed.getSlug()).isEqualTo("applications-2");
+        em.flush();
+        em.clear();
+        assertThat(boardService.getBoard(board.getId(), ALICE).slug()).isEqualTo("applications-2");
+    }
+
+    @Test
+    void renamingToTheSameSlugKeepsIt() {
+        Board second = boardService.createBoard(ALICE, "My board");
+        assertThat(second.getSlug()).isEqualTo("my-board-2");
+
+        assertThat(boardService.renameBoard(second.getId(), ALICE, "My Board!").getSlug()).isEqualTo("my-board-2");
+        assertThat(boardService.renameBoard(board.getId(), ALICE, "MY BOARD").getSlug()).isEqualTo("my-board");
+    }
+
+    @Test
+    void renameChecksTheName() {
+        assertThatThrownBy(() -> boardService.renameBoard(board.getId(), ALICE, "  "))
+                .satisfies(e -> assertStatus(e, HttpStatus.BAD_REQUEST));
+        assertThatThrownBy(() -> boardService.renameBoard(board.getId(), ALICE, "a".repeat(51)))
+                .satisfies(e -> assertStatus(e, HttpStatus.BAD_REQUEST));
+        assertThat(boardService.renameBoard(board.getId(), ALICE, "a".repeat(50)).getName()).hasSize(50);
+    }
+
+    @Test
+    void cannotRenameBoardOfOtherUser() {
+        userRepository.save(new User("Bob", BOB, null));
+
+        assertThatThrownBy(() -> boardService.renameBoard(board.getId(), BOB, "Mine now"))
+                .satisfies(e -> assertStatus(e, HttpStatus.NOT_FOUND));
+        em.flush();
+        em.clear();
+        assertThat(boardService.getBoard(board.getId(), ALICE).name()).isEqualTo("My board");
+    }
+
+    @Test
     void boardDetailCarriesTheSlug() {
         assertThat(boardService.getBoard(board.getId(), ALICE).slug()).isEqualTo("my-board");
     }

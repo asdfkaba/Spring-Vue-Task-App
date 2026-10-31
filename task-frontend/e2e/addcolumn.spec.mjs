@@ -29,10 +29,10 @@ test('Add column button in the header', async ({ browser }) => {
   await desk.getByText('Task A', { exact: true }).waitFor()
   const headerButton = () => desk.getByRole('button', { name: 'Add column' })
 
-  await check(desk, 'header has Share, Add column, New task in that order', async () => {
+  await check(desk, 'header has Settings, Add column, New task in that order', async () => {
     const labels = await desk.locator('h1').locator('xpath=ancestor::div[contains(@class,"justify-between")][1]').getByRole('button').allInnerTexts()
     const names = labels.map((t) => t.trim()).filter(Boolean)
-    expect(JSON.stringify(names.slice(-3)) === '["Share","Add column","New task"]', JSON.stringify(names))
+    expect(JSON.stringify(names.slice(-3)) === '["Settings","Add column","New task"]', JSON.stringify(names))
     expect((await headerButton().count()) === 1, 'more than one Add column button')
     await desk.screenshot({ path: `${outDir}/ac-1-desktop.png` })
   })

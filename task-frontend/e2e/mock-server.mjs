@@ -27,6 +27,7 @@ const OLD_UUID = '13d72268-5904-431b-b410-f348df9ec414'
 let share // { key, created }
 let shareRequests
 const newKey = () => Array.from({ length: 22 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'[Math.floor(Math.random() * 64)]).join('')
+let boardDeleted
 let tasks
 let notes // [{ id, taskId, text, user, created, edited }]
 let log
@@ -39,7 +40,8 @@ function reset() {
     { id: 12, name: 'Done', color: '#22c55e', position: 2 },
   ]
   labels = []
-  board.taskTemplate = null
+  Object.assign(board, { name: 'My board', slug: 'my-board', taskTemplate: null })
+  boardDeleted = false
   events = []
   eventId = 1
   share = null
@@ -63,11 +65,20 @@ function api(method, url, body) {
   const p = u.pathname.replace(/^\/api/, '')
   let m
   if (method === 'GET' && p === '/auth/status') return [200, { email: 'alice@example.com', name: 'Alice' }]
-  if (method === 'GET' && p === '/boards') return [200, [{ id: 1, name: board.name, slug: board.slug }]]
+  if (method === 'GET' && p === '/boards') return [200, boardDeleted ? [] : [{ id: 1, name: board.name, slug: board.slug }]]
+  if (method === 'DELETE' && p === '/boards/1') { boardDeleted = true; return [204, null] }
   if (method === 'GET' && p === '/boards/1') {
     const cols = sortedColumns()
     const ts = cols.flatMap((c) => inColumn(c.id))
     return [200, { ...board, columns: cols, labels, tasks: ts }]
+  }
+  if (method === 'PATCH' && p === '/boards/1') {
+    const name = body.name?.trim()
+    if (!name || name.length > 50) return [400, { message: 'Board name must not be empty' }]
+    // Simplified slug rule of the backend (there is only one board, so no clashes).
+    board.name = name
+    board.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'board'
+    return [200, { id: 1, name: board.name, slug: board.slug }]
   }
   if (method === 'POST' && p === '/boards/1/columns') {
     const c = { id: nextId++, name: body.name.trim(), color: body.color ?? null, position: columns.length }

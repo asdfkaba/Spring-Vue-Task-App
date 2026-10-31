@@ -6,6 +6,7 @@ import com.example.demo.board.BoardDtos.ColumnDto;
 import com.example.demo.board.BoardDtos.ColumnPatch;
 import com.example.demo.board.BoardDtos.NewBoardRequest;
 import com.example.demo.board.BoardDtos.NewColumnRequest;
+import com.example.demo.board.BoardDtos.RenameBoardRequest;
 import com.example.demo.board.BoardDtos.TaskTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,11 @@ public class BoardController {
     @ResponseStatus(HttpStatus.CREATED)
     public BoardSummary createBoard(@RequestBody NewBoardRequest request) {
         return BoardSummary.from(boardService.createBoard(currentUserEmail(), request.name()));
+    }
+
+    @PatchMapping("/boards/{id}")
+    public BoardSummary renameBoard(@PathVariable("id") int id, @RequestBody RenameBoardRequest request) {
+        return BoardSummary.from(boardService.renameBoard(id, currentUserEmail(), request.name()));
     }
 
     @DeleteMapping("/boards/{id}")
