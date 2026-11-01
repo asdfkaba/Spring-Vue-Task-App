@@ -30,6 +30,7 @@ const emit = defineEmits(['open', 'menu', 'move'])
 const due = computed(() => fromApi(props.task.due_date))
 const isOverdue = computed(() => due.value !== null && due.value < new Date())
 const showArrows = computed(() => !props.readonly && (props.leftColumn || props.rightColumn))
+// The menu button sets the header height of editable cards; read-only ones need their own spacing.
 // Compact cards on mouse devices drop the row that would only hold the (hidden) arrows; dragging
 // and the menu still move the task.
 const onlyArrows = computed(() => !due.value && !checklist.value && !props.labels.length)
@@ -62,11 +63,11 @@ function onClick(event) {
   >
     <div class="absolute inset-y-0 left-0 w-1.5" :style="{ backgroundColor: color ?? DEFAULT_COLUMN_COLOR }" />
 
-    <div class="flex flex-col pr-2 pl-4" :class="compact ? 'gap-1 py-1.5' : 'gap-2 py-3'">
+    <div class="flex flex-col pr-2 pl-4" :class="compact ? (readonly ? 'gap-1 py-2' : 'gap-1 py-1.5') : 'gap-2 py-3'">
       <header class="flex items-start justify-between gap-2">
         <h3
           class="leading-snug font-semibold break-words text-slate-900 dark:text-slate-100"
-          :class="compact ? 'pt-1 text-[0.8125rem]' : 'text-sm'"
+          :class="compact ? ['text-[0.8125rem]', { 'pt-1': !readonly }] : 'text-sm'"
         >
           <template v-for="(piece, i) in titlePieces" :key="i">
             <mark v-if="piece.hit" class="rounded-sm bg-yellow-200 text-inherit dark:bg-yellow-500/40">{{ piece.text }}</mark>
@@ -101,7 +102,7 @@ function onClick(event) {
       <div
         v-if="due || checklist || showArrows || (compact && labels.length)"
         class="flex flex-wrap items-center gap-2 text-xs"
-        :class="{ '-mt-1': compact, '[@media(hover:hover)]:hidden': compact && onlyArrows }"
+        :class="{ '-mt-1': compact && !readonly, '[@media(hover:hover)]:hidden': compact && onlyArrows }"
       >
         <!-- Compact: labels as dots, the name shows on hover and is read out by screen readers. -->
         <span v-if="compact && labels.length" class="flex flex-wrap items-center gap-1" data-testid="label-dots">
