@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
@@ -9,7 +9,12 @@ import TaskCard from '@/components/TaskCard.vue'
 import TaskDetails from '@/components/TaskDetails.vue'
 import BoardFilter from '@/components/BoardFilter.vue'
 import { useBoardFilter } from '@/composables/useBoardFilter'
+import { useBoardViewPrefs } from '@/composables/useBoardViewPrefs'
+import ViewSwitch from '@/components/ViewSwitch.vue'
 import { usePageTitle } from '@/utils/title'
+
+// PrimeVue's DataTable is large; load it only when the table view is opened.
+const TaskTable = defineAsyncComponent(() => import('@/components/TaskTable.vue'))
 
 // Read-only board behind a share link. Works without login, so it uses plain fetch.
 const route = useRoute()
@@ -60,6 +65,14 @@ const countLabel = (columnId) => {
   const total = tasksByColumn.value[columnId].length
   return filterActive.value ? `${visibleCount(columnId)} / ${total}` : `${total}`
 }
+
+// Remembered per share link (its key, which survives a rename of the board) on this device.
+const { view, compact, setView, toggleCompact } = useBoardViewPrefs(() =>
+  board.value?.path ? `share:${board.value.path.slice(-22)}` : null,
+)
+const tableTasks = computed(() =>
+  (board.value?.columns ?? []).flatMap((c) => tasksByColumn.value[c.id] ?? []).filter((t) => matchOf(t).matches),
+)
 
 // The task shown in the dialog; read-only, so there is no edit mode.
 const openTask = ref(null)
@@ -115,6 +128,7 @@ watch(
       <div class="flex flex-wrap items-center gap-3">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ board.name }}</h1>
         <Tag value="Read only" icon="pi pi-eye" severity="secondary" />
+        <ViewSwitch class="ml-auto" :view="view" :compact="compact" @update:view="setView" @toggle-compact="toggleCompact" />
       </div>
 
       <BoardFilter
@@ -126,7 +140,18 @@ watch(
         @clear="clearFilter"
       />
 
-      <div class="-mx-4 overflow-x-auto px-4 pb-4">
+      <TaskTable
+        v-if="view === 'table'"
+        :tasks="tableTasks"
+        :columns="board.columns"
+        :labelsOf="labelsOf"
+        :terms="filterTerms"
+        :filtered="filterActive && board.tasks.length > 0"
+        readonly
+        @open="showTask"
+      />
+
+      <div v-else class="-mx-4 overflow-x-auto px-4 pb-4">
         <div class="flex items-start gap-4">
           <div
             v-for="column in board.columns"
@@ -154,6 +179,7 @@ watch(
                 v-show="matchOf(task).matches"
                 :terms="filterTerms"
                 :matchInDescription="matchOf(task).inDescription && !matchOf(task).inTitle"
+                :compact="compact"
                 @open="showTask"
               />
             </div>

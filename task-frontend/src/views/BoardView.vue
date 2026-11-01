@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { VueDraggable } from 'vue-draggable-plus'
 import Button from 'primevue/button'
@@ -20,6 +20,12 @@ import BoardDialog from '@/components/BoardDialog.vue'
 import BoardDeleteDialog from '@/components/BoardDeleteDialog.vue'
 import BoardSettings from '@/components/BoardSettings.vue'
 import { usePageTitle } from '@/utils/title'
+import { readStorage, writeStorage } from '@/utils/storage'
+import { useBoardViewPrefs } from '@/composables/useBoardViewPrefs'
+import ViewSwitch from '@/components/ViewSwitch.vue'
+
+// PrimeVue's DataTable is large; load it only when someone opens the table view.
+const TaskTable = defineAsyncComponent(() => import('@/components/TaskTable.vue'))
 
 const store = useBoardStore()
 const route = useRoute()
@@ -29,23 +35,6 @@ const toast = useToast()
 
 function showError(summary, err) {
   toast.add({ severity: 'error', summary, detail: err.message, life: 5000 })
-}
-
-// localStorage can be unavailable (private mode, blocked storage); the page works without it.
-function readStorage(key) {
-  try {
-    return localStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-
-function writeStorage(key, value) {
-  try {
-    localStorage.setItem(key, value)
-  } catch {
-    // Not remembered then.
-  }
 }
 
 const LAST_BOARD_KEY = 'lastBoardId'
@@ -139,19 +128,12 @@ function askDeleteBoard(board) {
   deleteBoardVisible.value = true
 }
 
-// ---- Compact cards ----
-// A view preference per board and device, so it lives in localStorage and not on the board.
-const compactKey = (boardId) => `compactCards:${boardId}`
-const compact = ref(false)
-watch(
-  () => store.board?.id,
-  (id) => (compact.value = id != null && readStorage(compactKey(id)) === '1'),
-  { immediate: true },
+// ---- Board or table view, compact cards ----
+const { view, compact, setView, toggleCompact } = useBoardViewPrefs(() => store.board?.id ?? null)
+// All tasks that pass the filter, in board order (column by column).
+const tableTasks = computed(() =>
+  store.columns.flatMap((c) => store.tasksByColumn[c.id] ?? []).filter((t) => matchOf(t).matches),
 )
-function toggleCompact() {
-  compact.value = !compact.value
-  writeStorage(compactKey(store.board.id), compact.value ? '1' : '0')
-}
 
 // /boards/<slug>/settings shows the board's settings instead of its columns.
 const settingsOpen = computed(() => route.name === 'board-settings')
@@ -522,15 +504,7 @@ function askDeleteColumn(column) {
             :aria-expanded="filterOpen || filterActive"
             @click="toggleFilterRow"
           />
-          <Button
-            icon="pi pi-list"
-            :severity="compact ? undefined : 'secondary'"
-            :outlined="!compact"
-            aria-label="Compact cards"
-            title="Compact cards"
-            :aria-pressed="compact"
-            @click="toggleCompact"
-          />
+          <ViewSwitch :view="view" :compact="compact" @update:view="setView" @toggle-compact="toggleCompact" />
           <Button
             :label="isMobile ? undefined : 'Settings'"
             aria-label="Board settings"
@@ -553,7 +527,7 @@ function askDeleteColumn(column) {
             :label="isMobile ? undefined : 'New task'"
             aria-label="New task"
             icon="pi pi-plus"
-            @click="openCreateTask(isMobile ? activeColumnId : store.columns[0].id)"
+            @click="openCreateTask(isMobile && view === 'board' ? activeColumnId : store.columns[0].id)"
           />
         </div>
       </div>
@@ -584,6 +558,17 @@ function askDeleteColumn(column) {
       </div>
 
       <BoardSettings v-else-if="store.loaded && settingsOpen" @delete="askDeleteBoard" />
+
+      <TaskTable
+        v-else-if="store.loaded && view === 'table'"
+        :tasks="tableTasks"
+        :columns="store.columns"
+        :labelsOf="store.labelsOf"
+        :terms="filterTerms"
+        :filtered="filterActive && store.taskCount > 0"
+        @open="openTask"
+        @move="moveTaskTo"
+      />
 
       <template v-else-if="store.loaded">
         <!-- Small screens: tabs to jump between columns -->

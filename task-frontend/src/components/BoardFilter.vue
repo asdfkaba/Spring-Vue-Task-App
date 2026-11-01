@@ -46,7 +46,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <!-- Default sizes on purpose: the installed theme (@primevue/themes 4.0) has no "small" MultiSelect. -->
   <div class="flex flex-wrap items-center gap-2" role="search">
     <IconField class="min-w-0 flex-1 sm:max-w-80 sm:flex-none">
       <!-- Centered explicitly: PrimeVue's negative margin for this is overridden here. -->
