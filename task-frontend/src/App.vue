@@ -68,9 +68,7 @@ onMounted(async () => {
     <header class="sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
       <div class="mx-auto flex h-14 items-center justify-between gap-4 px-4" :class="fullWidth ? 'max-w-none' : 'max-w-6xl'">
         <RouterLink to="/boards" class="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
-          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white">
-            <i class="pi pi-check-square" />
-          </span>
+          <img src="/favicon.svg" alt="" class="h-8 w-8" />
           Taskz
         </RouterLink>
 

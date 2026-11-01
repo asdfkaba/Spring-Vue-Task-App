@@ -255,7 +255,7 @@ function api(method, url, body) {
   return [404, {}]
 }
 
-const types = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' }
+const types = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.png': 'image/png' }
 
 http.createServer((req, res) => {
   if (req.url.startsWith('/api/')) {
