@@ -283,9 +283,16 @@ const menuTask = ref(null)
 const taskMenuItems = computed(() => {
   const task = menuTask.value
   if (!task) return []
+  // The arrow points the way the task moves: left for columns before its own, right for those after.
+  const current = store.columns.findIndex((c) => c.id === task.columnId)
   const targets = store.columns
-    .filter((c) => c.id !== task.columnId)
-    .map((c) => ({ label: c.name, icon: 'pi pi-arrow-right', command: () => moveTaskTo(task, c.id) }))
+    .map((c, index) => ({ column: c, index }))
+    .filter(({ column }) => column.id !== task.columnId)
+    .map(({ column, index }) => ({
+      label: column.name,
+      icon: index < current ? 'pi pi-arrow-left' : 'pi pi-arrow-right',
+      command: () => moveTaskTo(task, column.id),
+    }))
   return [
     { label: 'Edit', icon: 'pi pi-pencil', command: () => openTask(task, 'edit') },
     ...(targets.length ? [{ label: 'Move to', items: targets }] : []),
