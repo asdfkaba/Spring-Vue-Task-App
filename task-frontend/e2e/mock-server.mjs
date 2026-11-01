@@ -137,7 +137,7 @@ function api(method, url, body) {
   }
   if (method === 'POST' && p === '/tasks') {
     if (!body.columnId) return [400, {}]
-    const t = { id: nextId++, title: body.title, description: body.description, due_date: body.due_date, created: null, edited: null, columnId: body.columnId, position: inColumn(body.columnId).length, labelIds: body.labelIds ?? [] }
+    const t = { id: nextId++, title: body.title, description: body.description, due_date: body.due_date, created: now(), edited: null, columnId: body.columnId, position: inColumn(body.columnId).length, labelIds: body.labelIds ?? [] }
     tasks.push(t)
     record(t, 'created', { title: t.title, column: colName(t.columnId) })
     return [201, t]
