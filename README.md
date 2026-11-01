@@ -26,3 +26,7 @@ Both run in GitHub Actions on pull requests and before every deploy (`.github/wo
 
 The schema is managed by Flyway (`src/main/resources/db/migration`). Hibernate only validates it,
 so a new or changed entity field needs a new migration `V<n>__<description>.sql`.
+
+## Backups
+
+Daily `pg_dump` of the database with a systemd timer: see [deploy/backup](deploy/backup/README.md).

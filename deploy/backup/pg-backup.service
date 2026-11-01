@@ -1,0 +1,8 @@
+[Unit]
+Description=Dump the Taskz database
+
+[Service]
+Type=oneshot
+# The database user from spring.datasource.username; the password goes into ~/.pgpass.
+Environment=DB_USER=CHANGE_ME
+ExecStart=%h/tasks/pg-backup.sh
