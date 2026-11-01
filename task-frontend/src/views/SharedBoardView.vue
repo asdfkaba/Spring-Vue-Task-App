@@ -128,7 +128,7 @@ watch(
       <div class="flex flex-wrap items-center gap-3">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ board.name }}</h1>
         <Tag value="Read only" icon="pi pi-eye" severity="secondary" />
-        <ViewSwitch class="ml-auto" :view="view" :compact="compact" @update:view="setView" @toggle-compact="toggleCompact" />
+        <ViewSwitch class="ml-auto" labelsFrom="48rem" :view="view" :compact="compact" @update:view="setView" @toggle-compact="toggleCompact" />
       </div>
 
       <BoardFilter
