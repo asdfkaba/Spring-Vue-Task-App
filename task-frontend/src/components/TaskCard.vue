@@ -22,13 +22,18 @@ const props = defineProps({
   terms: { type: Array, default: () => [] },
   // The search matched the description but not the title; say so, the description may be cut off.
   matchInDescription: { type: Boolean, default: false },
+  // Compact cards for large boards: no description, labels as colored dots, smaller title.
+  compact: { type: Boolean, default: false },
 })
 const emit = defineEmits(['open', 'menu', 'move'])
 
 const due = computed(() => fromApi(props.task.due_date))
 const isOverdue = computed(() => due.value !== null && due.value < new Date())
 const showArrows = computed(() => !props.readonly && (props.leftColumn || props.rightColumn))
-const descriptionHtml = computed(() => renderMarkdown(props.task.description))
+// Compact cards on mouse devices drop the row that would only hold the (hidden) arrows; dragging
+// and the menu still move the task.
+const onlyArrows = computed(() => !due.value && !checklist.value && !props.labels.length)
+const descriptionHtml = computed(() => (props.compact ? '' : renderMarkdown(props.task.description)))
 const titlePieces = computed(() => highlight(props.task.title, props.terms))
 // Progress of the description's checkboxes, e.g. { done: 2, total: 5 }; null without checkboxes.
 const checklist = computed(() => {
@@ -57,9 +62,12 @@ function onClick(event) {
   >
     <div class="absolute inset-y-0 left-0 w-1.5" :style="{ backgroundColor: color ?? DEFAULT_COLUMN_COLOR }" />
 
-    <div class="flex flex-col gap-2 py-3 pr-2 pl-4">
+    <div class="flex flex-col pr-2 pl-4" :class="compact ? 'gap-1 py-1.5' : 'gap-2 py-3'">
       <header class="flex items-start justify-between gap-2">
-        <h3 class="text-sm leading-snug font-semibold break-words text-slate-900 dark:text-slate-100">
+        <h3
+          class="leading-snug font-semibold break-words text-slate-900 dark:text-slate-100"
+          :class="compact ? 'pt-1 text-[0.8125rem]' : 'text-sm'"
+        >
           <template v-for="(piece, i) in titlePieces" :key="i">
             <mark v-if="piece.hit" class="rounded-sm bg-yellow-200 text-inherit dark:bg-yellow-500/40">{{ piece.text }}</mark>
             <template v-else>{{ piece.text }}</template>
@@ -78,7 +86,7 @@ function onClick(event) {
         />
       </header>
 
-      <div v-if="labels.length" class="-mt-1 flex flex-wrap gap-1">
+      <div v-if="labels.length && !compact" class="-mt-1 flex flex-wrap gap-1">
         <LabelPill v-for="label in labels" :key="label.id" :label="label" />
       </div>
 
@@ -90,7 +98,23 @@ function onClick(event) {
       <!-- Sanitized in renderMarkdown. -->
       <div v-if="descriptionHtml" class="markdown line-clamp-3" v-html="descriptionHtml" />
 
-      <div v-if="due || checklist || showArrows" class="flex flex-wrap items-center gap-2 text-xs">
+      <div
+        v-if="due || checklist || showArrows || (compact && labels.length)"
+        class="flex flex-wrap items-center gap-2 text-xs"
+        :class="{ '-mt-1': compact, '[@media(hover:hover)]:hidden': compact && onlyArrows }"
+      >
+        <!-- Compact: labels as dots, the name shows on hover and is read out by screen readers. -->
+        <span v-if="compact && labels.length" class="flex flex-wrap items-center gap-1" data-testid="label-dots">
+          <span
+            v-for="label in labels"
+            :key="label.id"
+            role="img"
+            :aria-label="`Label ${label.name}`"
+            :title="label.name"
+            class="h-2.5 w-2.5 rounded-full ring-1 ring-black/10 dark:ring-white/20"
+            :style="{ backgroundColor: label.color }"
+          />
+        </span>
         <span
           v-if="checklist"
           data-testid="checklist-progress"

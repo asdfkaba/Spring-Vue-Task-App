@@ -139,6 +139,20 @@ function askDeleteBoard(board) {
   deleteBoardVisible.value = true
 }
 
+// ---- Compact cards ----
+// A view preference per board and device, so it lives in localStorage and not on the board.
+const compactKey = (boardId) => `compactCards:${boardId}`
+const compact = ref(false)
+watch(
+  () => store.board?.id,
+  (id) => (compact.value = id != null && readStorage(compactKey(id)) === '1'),
+  { immediate: true },
+)
+function toggleCompact() {
+  compact.value = !compact.value
+  writeStorage(compactKey(store.board.id), compact.value ? '1' : '0')
+}
+
 // /boards/<slug>/settings shows the board's settings instead of its columns.
 const settingsOpen = computed(() => route.name === 'board-settings')
 
@@ -509,6 +523,15 @@ function askDeleteColumn(column) {
             @click="toggleFilterRow"
           />
           <Button
+            icon="pi pi-list"
+            :severity="compact ? undefined : 'secondary'"
+            :outlined="!compact"
+            aria-label="Compact cards"
+            title="Compact cards"
+            :aria-pressed="compact"
+            @click="toggleCompact"
+          />
+          <Button
             :label="isMobile ? undefined : 'Settings'"
             aria-label="Board settings"
             icon="pi pi-cog"
@@ -671,6 +694,7 @@ function askDeleteColumn(column) {
                     v-show="matchOf(task).matches"
                     :terms="filterTerms"
                     :matchInDescription="matchOf(task).inDescription && !matchOf(task).inTitle"
+                    :compact="compact"
                     @open="openTask"
                     @menu="showTaskMenu"
                     @move="moveTaskTo"
